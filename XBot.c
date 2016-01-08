@@ -111,19 +111,36 @@ task autonomous()
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
 	//AUT_demonstrate();
+	writeDebugStreamLine("[Auton]: Warming guns...");
 	AUT_warmGuns();
 	while (GUN_power < GUN_MAX_MOTOR_POWER) { // Max power changed
 		wait1Msec(50);
 	}
-	AUT_feedUpper(127, 1); // Fire first ball.
+	wait1Msec(5000);
+	writeDebugStreamLine("[Auton]: Guns warmed. Firing ball 1.");
+	//AUT_feedUpper(127, 1); // Fire first ball.
+	motor[PRT_feedUpper] = 127;
+	wait1Msec(1000);
+	motor[PRT_feedUpper] = 0;
+	wait1Msec(2000);
 	for (int i = 0; i < 3; i++) {
-			AUT_feedLower(127); // Enable feeds.
-			AUT_feedUpper(127);
-			AUT_surge(127, 1); // Move forward onto ball.
-			AUT_feedLower(0); // Disable feeds.
-			AUT_feedUpper(0);
-			AUT_surge(-127, 1); // Move back into place.
+			motor[PRT_feedLower] = 127;
+			motor[PRT_feedUpper] = 127;
+			//AUT_feedLower(127); // Enable feeds.
+			//AUT_feedUpper(127);
+			writeDebugStreamLine("[Auton]: Firing ball %i.", i + 2);
+			//AUT_surge(127, 1); // Move forward onto ball.
+			wait1Msec(1000);
+			writeDebugStreamLine("[Auton]: Ball fired.");
+			//AUT_feedLower(0); // Disable feeds.
+			//AUT_feedUpper(0);
+			motor[PRT_feedLower] = 0;
+			motor[PRT_feedUpper] = 0;
+			//AUT_surge(-127, 1); // Move back into place.
+			writeDebugStreamLine("[Auton]: Allowing guns to adjust.");
+			wait1Msec(2000);
 	}
+	writeDebugStreamLine("[Auton]: Shutting down.");
 	AUT_shutDown();
 	writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
 	LED_stopBlinkTask(id);

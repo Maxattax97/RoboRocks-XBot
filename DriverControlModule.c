@@ -74,12 +74,12 @@ void DRV_setupConfig() {
 		DRV_config[MecanumRotate] = UNASSIGNED;
 	} else if (DRV_CURRENT_DRIVER == Zander) {
 		//// ZANDER ////
-		DRV_config[OmniRight] = UNASSIGNED;
+		/*DRV_config[OmniRight] = UNASSIGNED;
 		DRV_config[OmniLeft] = UNASSIGNED;
 		DRV_config[OmniForward] = Ch3;
 		DRV_config[OmniRotate] = Ch4;
 		DRV_config[OmniMirrorForward] = Ch2;
-		DRV_config[OmniMirrorRotate] = Ch1;
+		DRV_config[OmniMirrorRotate] = Ch1;*/
 	} else if (DRV_CURRENT_DRIVER == Ryan) {
 		//// RYAN ////
 		DRV_config[MecanumRightNormal] = Ch3;
