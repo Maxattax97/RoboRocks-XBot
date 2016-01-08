@@ -12,7 +12,7 @@ const int GUN_WARM_INCREMENT = 10; // How much motor power to increase per wait 
 const float GUN_SPOOL_LOWER_POWER = 100.0; // Lower power level for spooling.
 const float GUN_SPOOL_LOWER_SPEED = (GUN_SPOOL_LOWER_POWER / 127.0) * GUN_MAX_MOTOR_SPEED * GUN_GEAR_RATIO; // The speed to drop to, then warm back up from.
 const int GUN_CYCLES_PER_SECOND = 25; // In Hertz, how many times a second the cycle repeats. Used for measurements.
- int GUN_MAX_MOTOR_POWER = 80; // ADD CONST
+const int GUN_MAX_MOTOR_POWER = 80;
 int GUN_power = 0; // How much power is being applied to gun motors currently.
 float GUN_leftSpeed = 0; // Speed of the guns in rps. Maximum is theoretically 35 rps.
 float GUN_rightSpeed = 0;
@@ -27,84 +27,6 @@ float GUN_HW_timeSinceLastBoost = 0;
 float GUN_HW_boostTime = 0.65;
 float GUN_HW_spoolDownTime = 0.75;
 
-// Dynamic, sensor based gun control system.
-void GUN_sensorCycle() {
-		GUN_deltaStart = ((float)time1[T1]) / 1000;
-
-		// Determine the speed the wheel should be theoretically moving at.
-		GUN_targetSpeed = ((((float)GUN_power) / 127.0) * GUN_MAX_MOTOR_SPEED) * GUN_GEAR_RATIO;
-
-		// If warming/spooling, check to see if a blink task exists yet. If not make one.
-		if (GUN_blinkId == -1 && (GUN_spool == true || GUN_warming == true)) {
-			GUN_blinkId = LED_startBlinkTask(Info, Fast);
-		} else if (GUN_blinkId != -1 && GUN_spool == false && GUN_warming == false) {
-			// If not warming, shut off blink task.
-			LED_stopBlinkTask(GUN_blinkId);
-			GUN_blinkId = -1;
-		}
-
-		/*if (GUN_spool == true || (GUN_warming == true && BAT_low == true)) {
-			// Warm up guns, unless spooling down.
-			if (GUN_leftSpeed >= GUN_targetSpeed && GUN_rightSpeed >= GUN_targetSpeed && GUN_spoolingDown == false) {
-				if (GUN_power < 120) {
-					GUN_power += GUN_WARM_INCREMENT;
-				} else {
-					if (GUN_power == 127) {
-						// After hitting full speed, spool down to conserve energy.
-						GUN_power = 0;
-						GUN_spoolingDown = true;
-					} else {
-						// Indicate to the user via light that the guns are warmed up and are ready for firing.
-						GUN_power = 127;
-						if (GUN_blinkId != -1)
-							LED_editBlinkTask(GUN_blinkId, Info, Solid);
-					}
-				}
-			} else if (GUN_spoolingDown == true && (GUN_leftSpeed <= GUN_SPOOL_LOWER_SPEED || GUN_rightSpeed <= GUN_SPOOL_LOWER_SPEED)) {
-				// Spool down until hitting a lower limit, then warm back up to full speed.
-				GUN_spoolingDown = false;
-				GUN_power = GUN_SPOOL_LOWER_POWER + GUN_WARM_INCREMENT;
-				// Maintain solid light so user knows its still safe to fire.
-				if (GUN_blinkId != -1)
-					LED_editBlinkTask(GUN_blinkId, Info, Solid);
-			}
-		} else*/ if (GUN_warming == true) {
-			// Check if speed is at or above target speed for given motor power level.
-			if (GUN_leftSpeed >= GUN_targetSpeed && GUN_rightSpeed >= GUN_targetSpeed) {
-				if (GUN_power < GUN_MAX_MOTOR_POWER) {
-					// Increment motor power to reach a higher speed.
-					GUN_power += GUN_WARM_INCREMENT;
-				} else {
-					// Set power to full and designate ready for firing.
-					GUN_power = GUN_MAX_MOTOR_POWER;
-					if (GUN_blinkId != -1)
-						LED_editBlinkTask(GUN_blinkId, Info, Solid);
-				}
-			}
-		} else if (GUN_spool == false && GUN_warming == false) {
-			// Cool guns by shutting motors off.
-			GUN_power = 0;
-		}
-
-		// Apply motor power.
-		motor[PRT_gunLeft1] = GUN_power;
-		motor[PRT_gunLeft2] = GUN_power;
-		motor[PRT_gunRight1] = GUN_power;
-		motor[PRT_gunRight2] = GUN_power;
-
-		wait1Msec(1000 / GUN_CYCLES_PER_SECOND);
-
-		// Calculate speed over time interval.
-		GUN_delta = (((float)time1[T1]) / 1000) - GUN_deltaStart;
-		// FIX THIS LINE
-		// GUN_leftSpeed = (((float)SensorValue[PRT_gunLeftQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta; // Revolutions per second.
-		GUN_leftSpeed = (((float)SensorValue[PRT_gunRightQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta; // Revolutions per second.
-		GUN_rightSpeed = (((float)SensorValue[PRT_gunRightQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta;
-
-		// Reset the sensors for the next sampling.
-		SensorValue[PRT_gunLeftQuad] = 0;
-		SensorValue[PRT_gunRightQuad] = 0;
-}
 
 // Static, timer based gun control system.
 void GUN_hardWaitCycle() {
@@ -184,6 +106,85 @@ void GUN_hardWaitCycle() {
 	//if (GUN_warming == true || GUN_spool == true) {
 		GUN_HW_timeSinceLastBoost -= GUN_delta;
 	//}
+}
+
+// Dynamic, sensor based gun control system.
+void GUN_sensorCycle() {
+		GUN_deltaStart = ((float)time1[T1]) / 1000;
+
+		// Determine the speed the wheel should be theoretically moving at.
+		GUN_targetSpeed = ((((float)GUN_power) / 127.0) * GUN_MAX_MOTOR_SPEED) * GUN_GEAR_RATIO;
+
+		// If warming/spooling, check to see if a blink task exists yet. If not make one.
+		if (GUN_blinkId == -1 && (GUN_spool == true || GUN_warming == true)) {
+			GUN_blinkId = LED_startBlinkTask(Info, Fast);
+		} else if (GUN_blinkId != -1 && GUN_spool == false && GUN_warming == false) {
+			// If not warming, shut off blink task.
+			LED_stopBlinkTask(GUN_blinkId);
+			GUN_blinkId = -1;
+		}
+
+		/*if (GUN_spool == true || (GUN_warming == true && BAT_low == true)) {
+			// Warm up guns, unless spooling down.
+			if (GUN_leftSpeed >= GUN_targetSpeed && GUN_rightSpeed >= GUN_targetSpeed && GUN_spoolingDown == false) {
+				if (GUN_power < 120) {
+					GUN_power += GUN_WARM_INCREMENT;
+				} else {
+					if (GUN_power == 127) {
+						// After hitting full speed, spool down to conserve energy.
+						GUN_power = 0;
+						GUN_spoolingDown = true;
+					} else {
+						// Indicate to the user via light that the guns are warmed up and are ready for firing.
+						GUN_power = 127;
+						if (GUN_blinkId != -1)
+							LED_editBlinkTask(GUN_blinkId, Info, Solid);
+					}
+				}
+			} else if (GUN_spoolingDown == true && (GUN_leftSpeed <= GUN_SPOOL_LOWER_SPEED || GUN_rightSpeed <= GUN_SPOOL_LOWER_SPEED)) {
+				// Spool down until hitting a lower limit, then warm back up to full speed.
+				GUN_spoolingDown = false;
+				GUN_power = GUN_SPOOL_LOWER_POWER + GUN_WARM_INCREMENT;
+				// Maintain solid light so user knows its still safe to fire.
+				if (GUN_blinkId != -1)
+					LED_editBlinkTask(GUN_blinkId, Info, Solid);
+			}
+		} else*/ if (GUN_warming == true) {
+			// Check if speed is at or above target speed for given motor power level.
+			if (GUN_leftSpeed >= GUN_targetSpeed && GUN_rightSpeed >= GUN_targetSpeed) {
+				if (GUN_power < GUN_MAX_MOTOR_POWER) {
+					// Increment motor power to reach a higher speed.
+					GUN_power += GUN_WARM_INCREMENT;
+				} else {
+					// Set power to full and designate ready for firing.
+					GUN_power = GUN_MAX_MOTOR_POWER;
+					if (GUN_blinkId != -1)
+						LED_editBlinkTask(GUN_blinkId, Info, Solid);
+				}
+			}
+		} else if (GUN_spool == false && GUN_warming == false) {
+			// Cool guns by shutting motors off.
+			GUN_power = 0;
+		}
+
+		// Apply motor power.
+		motor[PRT_gunLeft1] = GUN_power;
+		motor[PRT_gunLeft2] = GUN_power;
+		motor[PRT_gunRight1] = GUN_power;
+		motor[PRT_gunRight2] = GUN_power;
+
+		wait1Msec(1000 / GUN_CYCLES_PER_SECOND);
+
+		// Calculate speed over time interval.
+		GUN_delta = (((float)time1[T1]) / 1000) - GUN_deltaStart;
+		// FIX THIS LINE
+		// GUN_leftSpeed = (((float)SensorValue[PRT_gunLeftQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta; // Revolutions per second.
+		GUN_leftSpeed = (((float)SensorValue[PRT_gunRightQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta; // Revolutions per second.
+		GUN_rightSpeed = (((float)SensorValue[PRT_gunRightQuad]) / GUN_QUAD_TICKS_PER_REVOLUTION) / GUN_delta;
+
+		// Reset the sensors for the next sampling.
+		SensorValue[PRT_gunLeftQuad] = 0;
+		SensorValue[PRT_gunRightQuad] = 0;
 }
 
 task GUN_controller() {

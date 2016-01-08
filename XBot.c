@@ -133,6 +133,8 @@ task autonomous()
 //// USER CONTROL MODE ////
 ///////////////////////////
 
+short USR_pingId = -1;
+
 // For manual, computer-based value editing.
 bool USR_OVERRIDE_USER_CONTROL = false;
 #if (DEBUG == 1)
@@ -165,7 +167,7 @@ task usercontrol()
 		}
 
 		// Gun Control
-		gunButtonDownPrevious = gunButtonDown;
+		/*gunButtonDownPrevious = gunButtonDown;
 		if (vexRT[Btn8D] == true) {
 			gunButtonDown = true;
 			SensorValue(PRT_ledR) = 1;
@@ -178,12 +180,12 @@ task usercontrol()
 			writeDebugStreamLine("Statement reached.");
 			GUN_warming = !GUN_warming;
 			gunButtonDown = false;
-		}
+		}*/
 
-		/*if (DRV_controllerButtonsDown[GunWarm] == true) {
+		if (DRV_controllerButtonsDown[GunWarm] == true) {
 			GUN_warming = !GUN_warming;
 			DRV_controllerButtonsDown[GunWarm] = false;
-		}*//* else if (DRV_controllerButtonsDown[GunSpool] == true) {
+		}/* else if (DRV_controllerButtonsDown[GunSpool] == true) {
 			GUN_spool = !GUN_spool;
 			DRV_controllerButtonsDown[GunSpool] = false;
 		}*/
@@ -208,12 +210,6 @@ task usercontrol()
 			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
 			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
 			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-		} else if (DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED) {
-			// 2 channel (smart) MIRRORED drive for OMNI WHEELS enabled.
-			motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
 		} else if (DRV_config[MecanumRotate] == UNASSIGNED) {
 			// 4 channel (tank) drive for MECANUM WHEELS enabled.
 			int threshold = 20;
@@ -273,11 +269,22 @@ task usercontrol()
     		+ DRV_trimChannel(MecanumLeftStrafe);
 		}
 
+		if (DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED) {
+			// 2 channel (smart) MIRRORED drive for OMNI WHEELS enabled.
+			motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
+			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
+			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
+			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
+		}
+
 		// Ping
-		// Flashes lights on cortex when ping button pressed to indicate responsiveness.
-		SensorValue[PRT_ledG] = SensorValue[PRT_ledG] | vexRT[DRV_config[Ping]];
-		SensorValue[PRT_ledY] = SensorValue[PRT_ledY] | vexRT[DRV_config[Ping]];
-		SensorValue[PRT_ledR] = SensorValue[PRT_ledR] | vexRT[DRV_config[Ping]];
+		// Flashes lights on cortex while ping button is down to indicate responsiveness.
+		if (vexRT[DRV_config[Ping]] && USR_pingId == -1) {
+			USR_pingId = LED_startBlinkTask(Info, Solid);
+		} else if (USR_pingId != -1) {
+			if (LED_stopBlinkTask(USR_pingId))
+				USR_pingId = -1;
+		}
 
 		// Override controls
 		if (DRV_controllerButtonsDown[Override] == true) {

@@ -12,6 +12,7 @@ const float BAT_INTERVALS_PER_SECOND = 10; // How often the monitor will check p
 bool BAT_low = false; // To warn other modules of low battery. (Emergency consumption reducer.)
 
 task BAT_monitor() {
+	writeDebugStreamLine("[Battery]: The battery's voltage is currently reading %1.3f V.", ((float) nAvgBatteryLevel) * 0.001);
 	while (true) {
 		// Grabs an average sampling of the battery level then scales. (20 samples)
 		float batAvg = ((float) nAvgBatteryLevel) * 0.001;

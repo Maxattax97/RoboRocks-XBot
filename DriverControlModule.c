@@ -14,7 +14,9 @@
 // Add a name to DRV_Driver enum, then add configurations in DRV_setupConfig() using an if statement.
 enum DRV_Driver {Default, Parker, Patrick, Zander, Ryan, Sammy};
 // If you are unsure, leave the setting on Default. It is configured to be efficient and intuitive.
-const DRV_Driver DRV_CURRENT_DRIVER = Default;
+const DRV_Driver DRV_CURRENT_DRIVER = Zander;
+const int DRV_BUTTON_COUNT = 32;
+short DRV_simulatedButtonPress = -1;
 
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
@@ -23,8 +25,8 @@ enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeft
 	Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
-DRV_RemoteFunction DRV_config[32]; // This array returns the bound button/joystick value from the controller.
-bool DRV_controllerButtonsDown[32]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
+DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
+bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
 const int DRV_JOYSTICK_THRESHOLD = 20; // The trim for the joystick values.
 const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
@@ -35,10 +37,10 @@ void DRV_setupConfig() {
 	// Setup default button binds, then let DRV_CURRENT_DRIVER override. No hollow values that way.
 	// Joystick slots should only be channels or UNASSIGNED.
 	// Mecanum controls should never be buttons.
-	DRV_config[MecanumRightNormal] = Ch2; // Joystick channel that controls right side wheels forward and backward movement.
-	DRV_config[MecanumRightStrafe] = Ch1; // Joystick channel that controls the right side wheels strafing movement.
-	DRV_config[MecanumLeftNormal] = Ch3; // Joystick channel that controls the left side wheels forward and backward movement.
-	DRV_config[MecanumLeftStrafe] = Ch4; // Joystick channel that controls the left side wheels strafing movement.
+	DRV_config[MecanumRightNormal] = UNASSIGNED; // Joystick channel that controls right side wheels forward and backward movement.
+	DRV_config[MecanumRightStrafe] = UNASSIGNED; // Joystick channel that controls the right side wheels strafing movement.
+	DRV_config[MecanumLeftNormal] = UNASSIGNED; // Joystick channel that controls the left side wheels forward and backward movement.
+	DRV_config[MecanumLeftStrafe] = UNASSIGNED; // Joystick channel that controls the left side wheels strafing movement.
 	DRV_config[MecanumRotate] = UNASSIGNED; // Joystick channel that controls the rotating ability of both sides.
 	DRV_config[OmniLeft] = Ch3; // Joystick channel that controls the left side of omni wheels.
 	DRV_config[OmniRight] = Ch2; // Joystick channel that controls the right side of omni wheels.
@@ -72,6 +74,8 @@ void DRV_setupConfig() {
 		DRV_config[MecanumRotate] = UNASSIGNED;
 	} else if (DRV_CURRENT_DRIVER == Zander) {
 		//// ZANDER ////
+		DRV_config[OmniRight] = UNASSIGNED;
+		DRV_config[OmniLeft] = UNASSIGNED;
 		DRV_config[OmniForward] = Ch3;
 		DRV_config[OmniRotate] = Ch4;
 		DRV_config[OmniMirrorForward] = Ch2;
@@ -102,21 +106,26 @@ int DRV_trimChannel(DRV_RemoteFunction channel, int trim = DRV_JOYSTICK_THRESHOL
 	return value;
 }
 
+// Simulates a button press for debugging or controls.
+void DRV_simulateButtonPress(short button) {
+	DRV_simulatedButtonPress = button;
+}
+
 // The loop that handles button down "events".
 task DRV_buttonHandler()
 {
 	// Setup the drivers.
 	DRV_setupConfig();
 	// Clear the buttons.
-	for (int i = 0; i < sizeof(DRV_controllerButtonsDown) / 2; i++) {
+	for (int i = 0; i < DRV_BUTTON_COUNT; i++) {
 		DRV_controllerButtonsDown[i] = false;
 	}
-	bool lastController[32] = DRV_controllerButtonsDown;
+	bool lastController[DRV_BUTTON_COUNT] = DRV_controllerButtonsDown;
 	// Set all button presses to true if the button is down.
 	// After button value is checked, must be cancelled! Use DRV_controllerButtonsDown[button] = false
 	while(true) {
-		for (int button = 0; button < sizeof(DRV_config) / 2; button++) {
-			if (vexRT[DRV_config[button]] == true) {
+		for (int button = 0; button < DRV_BUTTON_COUNT; button++) {
+			if (vexRT[DRV_config[button]] == true || DRV_simulatedButtonPress == DRV_config[button]) {
 				if (lastController[button] != true) {
 					// New button down. Add it to the Controller.
 					writeDebugStreamLine("[Control]: Button %i down.", button);
@@ -127,6 +136,7 @@ task DRV_buttonHandler()
 				lastController[button] = false;
 			}
 		}
+		DRV_simulatedButtonPress = -1; // Reset simulated button to a non-existant one.
 		// Wait at a set interval, to allow processing power to other modules.
 		wait1Msec(1000 / DRV_INTERVALS_PER_SECOND);
 	}

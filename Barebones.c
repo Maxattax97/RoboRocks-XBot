@@ -80,7 +80,10 @@ task usercontrol()
 		gunButtonDownPrevious = gunButtonDown;
 		if (vexRT[Btn8D] == true) {
 			gunButtonDown = true;
+		} else {
+			gunButtonDown = false;
 		}
+
 		if (gunButtonDownPrevious == true && gunButtonDown == false) {
 			warmGuns = !warmGuns;
 			gunButtonDown = false;
