@@ -1,0 +1,133 @@
+//////////////////////////////////////////////////////////////////////////////////////
+//                               Driver Control Module                              //
+//////////////////////////////////////////////////////////////////////////////////////
+// This module allows a wide variety of configurations per driver. It allows drivers//
+// to swap position at the change of the DRV_CURRENT_DRIVER variable to a defined   //
+// enum value. New drivers can easily be added and have an effect throughout the    //
+// rest of the programming. It also cleans controller values to be used later by    //
+// other systems in the code, such as button down "events", or trimming joystick    //
+// values.                                                                          //
+//////////////////////////////////////////////////////////////////////////////////////
+
+// Set the DRV_CURRENT_DRIVER variable to whoever is preconfigured.
+// Alternatively, you can also add your own settings.
+// Add a name to DRV_Driver enum, then add configurations in DRV_setupConfig() using an if statement.
+enum DRV_Driver {Default, Parker, Patrick, Zander, Ryan, Sammy};
+// If you are unsure, leave the setting on Default. It is configured to be efficient and intuitive.
+const DRV_Driver DRV_CURRENT_DRIVER = Default;
+
+// Enum values to bind program functions with buttons.
+enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
+	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
+	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool,
+	Ping, Override, UNASSIGNED = 99};
+
+// These arrays are available for other parts of the code to retrieve cleaned values.
+DRV_RemoteFunction DRV_config[32]; // This array returns the bound button/joystick value from the controller.
+bool DRV_controllerButtonsDown[32]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
+
+const int DRV_JOYSTICK_THRESHOLD = 20; // The trim for the joystick values.
+const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
+
+void DRV_setupConfig() {
+	writeDebugStreamLine("[Config]: The designated driver index is %i", DRV_CURRENT_DRIVER);
+	//// DEFAULT ////
+	// Setup default button binds, then let DRV_CURRENT_DRIVER override. No hollow values that way.
+	// Joystick slots should only be channels or UNASSIGNED.
+	// Mecanum controls should never be buttons.
+	DRV_config[MecanumRightNormal] = Ch2; // Joystick channel that controls right side wheels forward and backward movement.
+	DRV_config[MecanumRightStrafe] = Ch1; // Joystick channel that controls the right side wheels strafing movement.
+	DRV_config[MecanumLeftNormal] = Ch3; // Joystick channel that controls the left side wheels forward and backward movement.
+	DRV_config[MecanumLeftStrafe] = Ch4; // Joystick channel that controls the left side wheels strafing movement.
+	DRV_config[MecanumRotate] = UNASSIGNED; // Joystick channel that controls the rotating ability of both sides.
+	DRV_config[OmniLeft] = Ch3; // Joystick channel that controls the left side of omni wheels.
+	DRV_config[OmniRight] = Ch2; // Joystick channel that controls the right side of omni wheels.
+	DRV_config[OmniForward] = UNASSIGNED; // Joystick channel that moves omni wheels forward and backward.
+	DRV_config[OmniRotate] = UNASSIGNED; // Joystick channel that turns omni wheels left and right.
+	DRV_config[OmniMirrorForward] = UNASSIGNED; // Joystick channel that moves omni wheels forward and backward in a mirrored fashion.
+	DRV_config[OmniMirrorRotate] = UNASSIGNED; // Joystick channel that turns omni wheels left and right in a mirrored fashion.
+	DRV_config[ToggleMirror] = Btn7D; // Toggles the reversing/mirroring of wheel control.
+	DRV_config[FeedLowerIn] = Btn5U; // Lower belt feed pulls items into robot.
+	DRV_config[FeedLowerOut] = Btn5D; // Lower belt feed pushes items out of robot.
+	DRV_config[FeedUpperIn] = Btn6U; // Upper belt feed pulls items into robot.
+	DRV_config[FeedUpperOut] = Btn6D; // Upper belt feed pushes items out of robot.
+	DRV_config[GunWarm] = Btn8D; // Toggles speeding up of both firing wheels.
+	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
+	DRV_config[Ping] = Btn7L; // Flashes lights on cortex to indicate responsiveness.
+	DRV_config[Override] = Btn7D; // Overrides a subsystem using a two button combination.
+
+	if (DRV_CURRENT_DRIVER == Parker) {
+		//// PARKER ////
+		DRV_config[MecanumRightNormal] = Ch3;
+		DRV_config[MecanumRightStrafe] = Ch4;
+		DRV_config[MecanumLeftNormal] = Ch3;
+		DRV_config[MecanumLeftStrafe] = Ch4;
+		DRV_config[MecanumRotate] = Ch1;
+	} else if (DRV_CURRENT_DRIVER == Patrick) {
+		//// PATRICK ////
+		DRV_config[MecanumRightNormal] = Ch2;
+		DRV_config[MecanumRightStrafe] = Ch1;
+		DRV_config[MecanumLeftNormal] = Ch3;
+		DRV_config[MecanumLeftStrafe] = Ch4;
+		DRV_config[MecanumRotate] = UNASSIGNED;
+	} else if (DRV_CURRENT_DRIVER == Zander) {
+		//// ZANDER ////
+		DRV_config[OmniForward] = Ch3;
+		DRV_config[OmniRotate] = Ch4;
+		DRV_config[OmniMirrorForward] = Ch2;
+		DRV_config[OmniMirrorRotate] = Ch1;
+	} else if (DRV_CURRENT_DRIVER == Ryan) {
+		//// RYAN ////
+		DRV_config[MecanumRightNormal] = Ch3;
+		DRV_config[MecanumRightStrafe] = Ch4;
+		DRV_config[MecanumLeftNormal] = Ch3;
+		DRV_config[MecanumLeftStrafe] = Ch4;
+		DRV_config[MecanumRotate] = Ch1;
+	} else if (DRV_CURRENT_DRIVER == Sammy) {
+		//// SAMMY ////
+		DRV_config[MecanumRightNormal] = Ch3;
+		DRV_config[MecanumRightStrafe] = Ch4;
+		DRV_config[MecanumLeftNormal] = Ch3;
+		DRV_config[MecanumLeftStrafe] = Ch4;
+		DRV_config[MecanumRotate] = Ch1;
+	}
+}
+
+// Trims the joystick channel's value. This eliminates joystick noise, and motor whining (Yay!).
+int DRV_trimChannel(DRV_RemoteFunction channel, int trim = DRV_JOYSTICK_THRESHOLD) {
+	int value = vexRT[DRV_config[channel]];
+	if (abs(value) <= trim) {
+		return 0;
+	}
+	return value;
+}
+
+// The loop that handles button down "events".
+task DRV_buttonHandler()
+{
+	// Setup the drivers.
+	DRV_setupConfig();
+	// Clear the buttons.
+	for (int i = 0; i < sizeof(DRV_controllerButtonsDown) / 2; i++) {
+		DRV_controllerButtonsDown[i] = false;
+	}
+	bool lastController[32] = DRV_controllerButtonsDown;
+	// Set all button presses to true if the button is down.
+	// After button value is checked, must be cancelled! Use DRV_controllerButtonsDown[button] = false
+	while(true) {
+		for (int button = 0; button < sizeof(DRV_config) / 2; button++) {
+			if (vexRT[DRV_config[button]] == true) {
+				if (lastController[button] != true) {
+					// New button down. Add it to the Controller.
+					writeDebugStreamLine("[Control]: Button %i down.", button);
+					DRV_controllerButtonsDown[button] = true;
+					lastController[button] = true;
+				}
+			} else {
+				lastController[button] = false;
+			}
+		}
+		// Wait at a set interval, to allow processing power to other modules.
+		wait1Msec(1000 / DRV_INTERVALS_PER_SECOND);
+	}
+}

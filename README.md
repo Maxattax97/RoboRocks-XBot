@@ -1,2 +1,2 @@
 # RoboRocks-XBot
-Vex 2014 - 2015 Competition Skyrise programming for the 7950 X Bot.
+Vex 2015 - 2016 Competition Nothing But Net programming for the (now) 7950R bot.
