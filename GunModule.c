@@ -9,10 +9,12 @@ const float GUN_QUAD_TICKS_PER_REVOLUTION = 360.0;
 const float GUN_MAX_MOTOR_SPEED = 1.6667; // Speed of a 393 motor in revolutions per second.
 const float GUN_GEAR_RATIO = 3.0; // Gear ratio from QUAD ENCODER to gun wheel. (This was 21.0)
 const int GUN_WARM_INCREMENT = 10; // How much motor power to increase per wait cycle.
+const int GUN_POWER_AMOUNT = 5; // How much to increase or decrease max motor power.
+const int GUN_DEFAULT_POWER = 75; // Default value for motor power. Resets to this when gun warm pressed.
 const float GUN_SPOOL_LOWER_POWER = 100.0; // Lower power level for spooling.
 const float GUN_SPOOL_LOWER_SPEED = (GUN_SPOOL_LOWER_POWER / 127.0) * GUN_MAX_MOTOR_SPEED * GUN_GEAR_RATIO; // The speed to drop to, then warm back up from.
 const int GUN_CYCLES_PER_SECOND = 25; // In Hertz, how many times a second the cycle repeats. Used for measurements.
-int GUN_MAX_MOTOR_POWER = 80; // SET CONST
+int GUN_maxMotorPower = GUN_DEFAULT_POWER; // Motor power when gun is fully warmed.
 int GUN_power = 0; // How much power is being applied to gun motors currently.
 float GUN_leftSpeed = 0; // Speed of the guns in rps. Maximum is theoretically 35 rps.
 float GUN_rightSpeed = 0;
@@ -70,11 +72,11 @@ void GUN_hardWaitCycle() {
 		}
 	} else */if (GUN_warming == true) {
 		if (GUN_power <= 0 || GUN_HW_timeSinceLastBoost <= 0) {
-			if (GUN_power < GUN_MAX_MOTOR_POWER) { // Max power changed
+			if (GUN_power < GUN_maxMotorPower) { // Max power changed
 				GUN_power += GUN_WARM_INCREMENT;
 				GUN_HW_timeSinceLastBoost = GUN_HW_boostTime;
 			} else {
-				GUN_power = GUN_MAX_MOTOR_POWER; // Max power changed
+				GUN_power = GUN_maxMotorPower; // Max power changed
 				GUN_HW_timeSinceLastBoost = 0;
 				if (GUN_blinkId != -1)
 					LED_editBlinkTask(GUN_blinkId, Info, Solid);
@@ -84,6 +86,7 @@ void GUN_hardWaitCycle() {
 		// Cool guns by ramping motors down.
 		//GUN_power = 0;
 		//GUN_HW_timeSinceLastBoost = 0;
+		GUN_maxMotorPower = GUN_DEFAULT_POWER;
 		if (GUN_power > 0 && GUN_HW_timeSinceLastBoost <= 0) {
 				GUN_power -= GUN_WARM_INCREMENT;
 				GUN_HW_timeSinceLastBoost = GUN_HW_boostTime;
@@ -113,7 +116,7 @@ void GUN_sensorCycle() {
 		GUN_deltaStart = ((float)time1[T1]) / 1000;
 
 		// Determine the speed the wheel should be theoretically moving at.
-		GUN_targetSpeed = ((((float)GUN_power) / 127.0) * GUN_MAX_MOTOR_SPEED) * GUN_GEAR_RATIO;
+		GUN_targetSpeed = ((((float)GUN_power) / 127.0) * GUN_maxMotorPower) * GUN_GEAR_RATIO;
 
 		// If warming/spooling, check to see if a blink task exists yet. If not make one.
 		if (GUN_blinkId == -1 && (GUN_spool == true || GUN_warming == true)) {
@@ -152,12 +155,12 @@ void GUN_sensorCycle() {
 		} else*/ if (GUN_warming == true) {
 			// Check if speed is at or above target speed for given motor power level.
 			if (GUN_leftSpeed >= GUN_targetSpeed && GUN_rightSpeed >= GUN_targetSpeed) {
-				if (GUN_power < GUN_MAX_MOTOR_POWER) {
+				if (GUN_power < GUN_maxMotorPower) {
 					// Increment motor power to reach a higher speed.
 					GUN_power += GUN_WARM_INCREMENT;
 				} else {
 					// Set power to full and designate ready for firing.
-					GUN_power = GUN_MAX_MOTOR_POWER;
+					GUN_power = GUN_maxMotorPower;
 					if (GUN_blinkId != -1)
 						LED_editBlinkTask(GUN_blinkId, Info, Solid);
 				}

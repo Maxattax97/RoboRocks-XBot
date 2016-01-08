@@ -113,7 +113,7 @@ task autonomous()
 	//AUT_demonstrate();
 	writeDebugStreamLine("[Auton]: Warming guns...");
 	AUT_warmGuns();
-	while (GUN_power < GUN_MAX_MOTOR_POWER) { // Max power changed
+	while (GUN_power < GUN_maxMotorPower) { // Max power changed
 		wait1Msec(50);
 	}
 	wait1Msec(5000);
@@ -158,9 +158,6 @@ bool USR_OVERRIDE_USER_CONTROL = false;
 USR_OVERRIDE_USER_CONTROL = true;
 #endif
 
-bool gunButtonDown = false;
-bool gunButtonDownPrevious = false;
-
 task usercontrol()
 {
 	writeDebugStreamLine("[Mode]: User Control mode enabled!");
@@ -184,22 +181,16 @@ task usercontrol()
 		}
 
 		// Gun Control
-		/*gunButtonDownPrevious = gunButtonDown;
-		if (vexRT[Btn8D] == true) {
-			gunButtonDown = true;
-			SensorValue(PRT_ledR) = 1;
-		} else {
-			gunButtonDown = false;
-			SensorValue(PRT_ledR) = 0;
+		if (DRV_controllerButtonsDown[GunIncrement] == true) {
+			GUN_maxMotorPower += GUN_POWER_AMOUNT;
+			DRV_controllerButtonsDown[GunIncrement] = false;
+		} else if (DRV_controllerButtonsDown[GunDecrement] == true) {
+			GUN_maxMotorPower -= GUN_POWER_AMOUNT;
+			DRV_controllerButtonsDown[GunDecrement] = false;
 		}
 
-		if (gunButtonDownPrevious == true && gunButtonDown == false) {
-			writeDebugStreamLine("Statement reached.");
-			GUN_warming = !GUN_warming;
-			gunButtonDown = false;
-		}*/
-
 		if (DRV_controllerButtonsDown[GunWarm] == true) {
+			GUN_maxMotorPower = GUN_DEFAULT_POWER;
 			GUN_warming = !GUN_warming;
 			DRV_controllerButtonsDown[GunWarm] = false;
 		}/* else if (DRV_controllerButtonsDown[GunSpool] == true) {

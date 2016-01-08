@@ -21,7 +21,7 @@ short DRV_simulatedButtonPress = -1;
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
-	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool,
+	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool, GunIncrement, GunDecrement,
 	Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
@@ -55,6 +55,8 @@ void DRV_setupConfig() {
 	DRV_config[FeedUpperOut] = Btn6D; // Upper belt feed pushes items out of robot.
 	DRV_config[GunWarm] = Btn8D; // Toggles speeding up of both firing wheels.
 	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
+	DRV_config[GunIncrement] = Btn7U; // Increments max gun speed.
+	DRV_config[GunDecrement] = Btn7D; // Decrements max gun speed.
 	DRV_config[Ping] = Btn7L; // Flashes lights on cortex to indicate responsiveness.
 	DRV_config[Override] = Btn7D; // Overrides a subsystem using a two button combination.
 
