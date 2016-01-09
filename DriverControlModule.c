@@ -22,13 +22,13 @@ short DRV_simulatedButtonPress = -1;
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
 	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool, GunIncrement, GunDecrement,
-	Ping, Override, UNASSIGNED = 99};
+	GunSmallIncrement, GunSmallDecrement, Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
 bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
-const int DRV_JOYSTICK_THRESHOLD = 20; // The trim for the joystick values.
+const int DRV_JOYSTICK_THRESHOLD = 5; // The trim for the joystick values.
 const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
 
 void DRV_setupConfig() {
@@ -57,8 +57,10 @@ void DRV_setupConfig() {
 	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
 	DRV_config[GunIncrement] = Btn7U; // Increments max gun speed.
 	DRV_config[GunDecrement] = Btn7D; // Decrements max gun speed.
-	DRV_config[Ping] = Btn7L; // Flashes lights on cortex to indicate responsiveness.
-	DRV_config[Override] = Btn7D; // Overrides a subsystem using a two button combination.
+	DRV_config[GunSmallIncrement] = Btn7R; // Increments max gun speed by a small amount.
+	DRV_config[GunSmallDecrement] = Btn7L; // Decrements max gun speed by a small amount.
+	DRV_config[Ping] = Btn8R; // Flashes lights on cortex to indicate responsiveness.
+	DRV_config[Override] = Btn7L; // Overrides a subsystem using a two button combination.
 
 	if (DRV_CURRENT_DRIVER == Parker) {
 		//// PARKER ////

@@ -28,7 +28,7 @@
 
 //Competition Control and Duration Settings
 #pragma competitionControl(Competition)
-#pragma autonomousDuration(20)
+#pragma autonomousDuration(15)
 #pragma userControlDuration(120)
 
 //Main competition background code...do not modify!
@@ -116,11 +116,11 @@ task autonomous()
 	while (GUN_power < GUN_maxMotorPower) { // Max power changed
 		wait1Msec(50);
 	}
-	wait1Msec(5000);
+	//wait1Msec(1000);
 	writeDebugStreamLine("[Auton]: Guns warmed. Firing ball 1.");
 	//AUT_feedUpper(127, 1); // Fire first ball.
 	motor[PRT_feedUpper] = 127;
-	wait1Msec(1000);
+	wait1Msec(500);
 	motor[PRT_feedUpper] = 0;
 	wait1Msec(2000);
 	for (int i = 0; i < 3; i++) {
@@ -130,7 +130,7 @@ task autonomous()
 			//AUT_feedUpper(127);
 			writeDebugStreamLine("[Auton]: Firing ball %i.", i + 2);
 			//AUT_surge(127, 1); // Move forward onto ball.
-			wait1Msec(1000);
+			wait1Msec(2500);
 			writeDebugStreamLine("[Auton]: Ball fired.");
 			//AUT_feedLower(0); // Disable feeds.
 			//AUT_feedUpper(0);
@@ -171,7 +171,6 @@ task usercontrol()
 		} else {
 			motor[PRT_feedLower] = 0;
 		}
-
 		if (DRV_config[FeedUpperIn] != UNASSIGNED && vexRT[DRV_config[FeedUpperIn]] == true) {
 			motor[PRT_feedUpper] = 127;
 		} else if (DRV_config[FeedUpperOut] != UNASSIGNED && vexRT[DRV_config[FeedUpperOut]] == true) {
@@ -182,11 +181,19 @@ task usercontrol()
 
 		// Gun Control
 		if (DRV_controllerButtonsDown[GunIncrement] == true) {
-			GUN_maxMotorPower += GUN_POWER_AMOUNT;
+			GUN_maxMotorPower += GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunDecrement] == true) {
-			GUN_maxMotorPower -= GUN_POWER_AMOUNT;
+			GUN_maxMotorPower -= GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunDecrement] = false;
+		}
+
+		if (DRV_controllerButtonsDown[GunSmallIncrement] == true) {
+			GUN_maxMotorPower += GUN_SMALL_INCREMENT;
+			DRV_controllerButtonsDown[GunSmallIncrement] = false;
+		} else if (DRV_controllerButtonsDown[GunSmallDecrement] == true) {
+			GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
+			DRV_controllerButtonsDown[GunSmallDecrement] = false;
 		}
 
 		if (DRV_controllerButtonsDown[GunWarm] == true) {
@@ -201,6 +208,7 @@ task usercontrol()
 		// Wheel Control
 		// Setup the wheel reversal.
 		int reverseMultiplier = 1;
+		// TODO: THIS IS WRONG. AFTER ONE LOOP, WILL RESET. EVENT IS CONSUMED!!!
 		if (DRV_controllerButtonsDown[ToggleMirror] == true) {
 			reverseMultiplier *= -1; // Flip the multiplier's sign.
 			DRV_controllerButtonsDown[ToggleMirror] = false; // Consume event.

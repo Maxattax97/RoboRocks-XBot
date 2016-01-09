@@ -11,6 +11,10 @@ const float BAT_WARN = 6.6; // When to flash LED and output voltage to debug str
 const float BAT_INTERVALS_PER_SECOND = 10; // How often the monitor will check per second.
 bool BAT_low = false; // To warn other modules of low battery. (Emergency consumption reducer.)
 
+// TODO: Monitor backup battery.
+// TODO: Investigate power expander status port.
+// http://www.vexrobotics.com/wiki/Power_Expander
+
 task BAT_monitor() {
 	writeDebugStreamLine("[Battery]: The battery's voltage is currently reading %1.3f V.", ((float) nAvgBatteryLevel) * 0.001);
 	while (true) {
