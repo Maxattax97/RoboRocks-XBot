@@ -58,6 +58,7 @@
 #include "BatteryModule.c"
 #include "DriverControlModule.c"
 #include "GunModule.c"
+#include "PIDLoopModule.c"
 #include "AutonomousModule.c"
 
 //////////////////////////
@@ -87,6 +88,9 @@ void pre_auton()
 
 	// Initialize the gun controller.
 	startTask(GUN_controller);
+
+	// Initialize the PID loop.
+	startTask(PID_controller);
 
 	// Prepare the Autonomous.
 	//AUT_calibrate();

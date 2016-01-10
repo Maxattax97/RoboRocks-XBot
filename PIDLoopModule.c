@@ -17,37 +17,45 @@
 // Enum to access the PID's two halves.
 enum PID_Side {Left = 0, Right};
 
-bool PID_enabled = true // Whether or not the PID is enabled for the system.
+bool PID_enabled = true; // Whether or not the PID is enabled for the system.
 const bool PID_INTEGRAL_ENABLED = false;
 const bool PID_DERIVATIVE_ENABLED = false;
 const int PID_POWER_MAX = 127; // Maximum and minimum amount of power for the PID to apply.
 const int PID_POWER_MIN = -127;
-const int PID_DEADBAND_THRESHOLD = 210; // When speed is less than this number, apply deadband.
-const int PID_POWER_POSITIVE_DEADBAND = 32; // Minimum power to set if not moving.
-const int PID_POWER_NEGATIVE_DEADBAND = -32; // Minimum power to set if not moving
 const int PID_INTEGRAL_LIMIT = 50; // Threshold for integral values.
 const int PID_INTERVALS_PER_SECOND = 50; // Rate in hertz that the PID evaluates at.
 
-const float PID_SENSOR_SCALE = 1; // If scaling of the encoder is necessary.
-const float PID_INPUT_SCALE = 77.09; // Set this to be ENCODER TICKS / RPM.
+const float PID_INPUT_SCALE = 90 * 3; // Set this to be ENCODER TICKS / REVOLUTION.
+const float PID_INPUT_MIRROR[] = {-1.0, 1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
 float PID_target[] = {0, 0}; // For setting the target speed. Do not touch.
 float PID_actual[] = {0, 0}; // For detecting actual speed. Do not touch.
-const float PID_SIGNAL_GENERATOR_MAX = 0.96; // Percentage value for "horse and carrot".
+const float PID_SIGNAL_GENERATOR_MAX = 0.7; // Percentage value for "horse and carrot".
 const int PID_SYSTEM_HYSTERESIS = 8; // Solves for motor jogging without breaking PID.
-float PID_targetMax = 2100; // Maximum speed.
+float PID_targetMax = 2100; // Maximum speed in RPM.
+float PID_deltaStart[] = {0, 0}; // For calculating speed of flywheel.
+float PID_delta[] = {0, 0};
 
 const int PID_OVERLOAD_THRESHOLD = 450; // If the PID is behind this much, activates overload blink task.
 short PID_blinkIdDisabled[] = {NULL, NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL, NULL};
 
 // PID Loop constants for Proportional, Integral, and Derivative (Items in the acronym PID).
-const float PID_KP = 0.8;
+const float PID_KP = 1.0;
 const float PID_KI = 0;
 const float PID_KD = 0;
+/*
+Ziegler-Nichols Method for Tuning PID Loops
 
-// How much controller button should add/subtract to the target.
-const float PID_CONTROL_INCREMENTER_UP = 0.625;
-const float PID_CONTROL_INCREMENTER_DOWN = 0.825;
+	 1. Adjust Kp until oscillates evenly (oscillation does not gain or lose).
+	 2. Ku = Kp.
+	 3. Time to complete one revolution = Tu.
+	 4. Follow table:
+
+	 Type |   Kp   |    Ki    |   Kd
+	    P | 0.50Ku |        - |      -
+	   PI | 0.45Ku | 1.2Kp/Tu |      -
+	  PID | 0.60Ku |   2Kp/Tu | KpTu/8
+*/
 
 // Internal PID variables, not meant to be touched by outside modules. Also allows for debugging.
 enum PID_Internal {filteredTarget, power, error, lastError, integral, derivative, lastTarget, lastActual};
@@ -56,21 +64,22 @@ float PID_internals[2][8];
 // A single PID cycle.
 void PID_cycle(PID_Side index) {
 	if (PID_enabled) {
+		// Determine how much time has elapsed (in minutes for RPM).
+		PID_delta[index] = ((((float)time1[T1]) / 1000) / 60) - PID_deltaStart[index];
+
 		// Grab the actual sensor value, then scale it (if necessary).
 		PID_internals[index][lastActual] = PID_actual[index];
 		if (index == Left) {
-			PID_actual[index] = SensorValue[PRT_gunQuadLeft] * PID_SENSOR_SCALE;
+			// Retrieve speed in RPM.
+			PID_actual[index] = (SensorValue[PRT_gunLeftQuad] * PID_INPUT_SCALE) / PID_delta[index] * PID_INPUT_MIRROR[index];
+			SensorValue[PRT_gunLeftQuad] = 0; // Clear encoder.
 		} else if (index == Right) {
-			PID_actual[index] = SensorValue[PRT_gunQuadRight] * PID_SENSOR_SCALE;
+			PID_actual[index] = (SensorValue[PRT_gunRightQuad] * PID_INPUT_SCALE) / PID_delta[index] * PID_INPUT_MIRROR[index];
+			SensorValue[PRT_gunRightQuad] = 0;
 		}
 
-		// Target filter using a signal generator (horse and carrot method).
-		// The horse and carrot method is a way of visualizing the movement of the PID's actuator
-		// in relation to the target's movement. The "carrot" (target) is gradually dragged to another location
-		// for the "horse" (actuator) to move to. The carrot does not teleport from one place to another.
-		PID_internals[index][filteredTarget] = PID_SIGNAL_GENERATOR_MAX * PID_internals[index][lastTarget]
-				+ (1.00 - PID_SIGNAL_GENERATOR_MAX) * PID_target[index];
-		PID_internals[index][lastTarget] = PID_internals[index][filteredTarget];
+		// Record the time between speed measurements.
+		PID_deltaStart = (((float)time1[T1]) / 1000) / 60;
 
 		// Cap the target so it doesn't get too crazy.
 		if (PID_target[index] > PID_targetMax) {
@@ -79,24 +88,34 @@ void PID_cycle(PID_Side index) {
 			PID_target[index] = 0;
 		}
 
+		// Target filter using a signal generator (horse and carrot method).
+		// The horse and carrot method is a way of visualizing the movement of the PID's actuator
+		// in relation to the target's movement. The "carrot" (target) is gradually dragged to another location
+		// for the "horse" (actuator) to move to. The carrot does not teleport from one place to another.
+		/*PID_internals[index][filteredTarget] = PID_SIGNAL_GENERATOR_MAX * PID_internals[index][lastTarget]
+				+ (1.00 - PID_SIGNAL_GENERATOR_MAX) * PID_target[index];
+		PID_internals[index][lastTarget] = PID_internals[index][filteredTarget];*/
+		// Disabled for tuning purposes.
+		PID_internals[index][filteredTarget] = PID_target[index];
+		PID_internals[index][lastTarget] = PID_internals[index][filteredTarget];
+
 		// Calculate the error.
 		PID_internals[index][error] = PID_actual[index] - PID_internals[index][filteredTarget];
-		if (abs(PID_internals[index][error]) <= PID_SYSTEM_HYSTERESIS) {
+		// Disabled for tuning purposes.
+		/*if (abs(PID_internals[index][error]) <= PID_SYSTEM_HYSTERESIS) {
 			PID_internals[index][error] = 0;
-		}
+		}*/
 
-		if (PID_INTEGRAL_ENABLED) {
+		if (PID_INTEGRAL_ENABLED && PID_KI != 0) {
 			// Accumulate error to fill the gap.
 			if (abs(PID_internals[index][error]) < PID_INTEGRAL_LIMIT) {
 				PID_internals[index][integral] += PID_internals[index][error];
 			}
-			if(PID_KI == 0)
-			    PID_internals[index][integral] = 0;
 		} else {
 			PID_internals[index][integral] = 0;
 		}
 
-		if (PID_DERIVATIVE_ENABLED) {
+		if (PID_DERIVATIVE_ENABLED && PID_KD != 0) {
 			// Predict future change via derivative.
 			PID_internals[index][derivative] = (PID_internals[index][error] - PID_internals[index][lastError]);
 			PID_internals[index][lastError] = PID_internals[index][error];
@@ -106,7 +125,7 @@ void PID_cycle(PID_Side index) {
 
 		// Calculate the power necessary to correct the found error.
 		// Negations are to keep error and power values in a logical context.
-		PID_internals[index][power] = -1 * ((PID_KP * PID_internals[index][error])
+		PID_internals[index][power] = ((PID_KP * PID_internals[index][error])
 				+ (PID_KI * PID_internals[index][integral])
 				+ (PID_KD * PID_internals[index][derivative]));
 
@@ -120,7 +139,8 @@ void PID_cycle(PID_Side index) {
 		// If the power level is below the deadband, increase it so that the
 		// motor is actually moving toward its goal. Only apply deadband if below the
 		// deadband threshold.
-		if (PID_internals[index][power] > 0 && PID_internals[index][power] < PID_POWER_POSITIVE_DEADBAND
+		// Disabled for tuning purposes.
+		/*if (PID_internals[index][power] > 0 && PID_internals[index][power] < PID_POWER_POSITIVE_DEADBAND
 				&& PID_POWER_POSITIVE_DEADBAND != 0 && PID_internals[index][power] != 0
 				&& PID_actual[index] > PID_DEADBAND_THRESHOLD) {
 			PID_internals[index][power] = PID_POWER_POSITIVE_DEADBAND;
@@ -128,7 +148,7 @@ void PID_cycle(PID_Side index) {
 				&& PID_POWER_NEGATIVE_DEADBAND != 0 && PID_internals[index][power] != 0
 				&& PID_actual[index] > (-1 * PID_DEADBAND_THRESHOLD)) {
 			PID_internals[index][power] = PID_POWER_NEGATIVE_DEADBAND;
-		}
+		}*/
 
 		// Set the motor power value.
 		// Type cast to keep from wrongly setting the motors.
@@ -141,9 +161,7 @@ void PID_cycle(PID_Side index) {
 		}
 
 		// Indicate that PID is struggling to meet its target.
-		if (abs(PID_internals[index][error]) >= PID_OVERLOAD_THRESHOLD
-				&& (PID_internals[index][power] >= PID_POWER_POSITIVE_DEADBAND
-				|| PID_internals[index][power] <= PID_POWER_NEGATIVE_DEADBAND)) {
+		if (abs(PID_internals[index][error]) >= PID_OVERLOAD_THRESHOLD) {
 			if (PID_blinkIdOverloaded[index] == NULL) {
 				PID_blinkIdOverloaded[index] = LED_startBlinkTask(Severe, Solid);
 			}
@@ -185,6 +203,7 @@ void PID_cycle(PID_Side index) {
 
 task PID_controller() {
 	//bool batLowRetrieved = false;
+	PID_deltaStart = ((float)time1[T1]) / 1000;
 	while (true) {
 		// Run each individual cycle per system.
 		PID_cycle(Left);
