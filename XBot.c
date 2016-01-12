@@ -86,6 +86,10 @@ void pre_auton()
 	// Initialize the battery monitor.
 	startTask(BAT_monitor);
 
+	// Reset sensors.
+	SensorValue[PRT_gunLeftQuad] = 0;
+	SensorValue[PRT_gunRightQuad] = 0;
+
 	// Initialize the gun controller.
 	startTask(GUN_controller);
 

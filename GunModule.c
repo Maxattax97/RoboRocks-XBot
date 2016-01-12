@@ -5,6 +5,7 @@
 // motors, conserve battery life, designate when warm, and other functions.         //
 //////////////////////////////////////////////////////////////////////////////////////
 
+const float GUN_ENABLED = false;
 const float GUN_QUAD_TICKS_PER_REVOLUTION = 360.0;
 const float GUN_MAX_MOTOR_SPEED = 1.6667; // Speed of a 393 motor in revolutions per second.
 const float GUN_GEAR_RATIO = 3.0; // Gear ratio from QUAD ENCODER to gun wheel. (This was 21.0)
@@ -29,7 +30,6 @@ short GUN_blinkId = -1;
 float GUN_HW_timeSinceLastBoost = 0;
 float GUN_HW_boostTime = 0.65;
 float GUN_HW_spoolDownTime = 0.75;
-
 
 // Static, timer based gun control system.
 void GUN_hardWaitCycle() {
@@ -196,7 +196,7 @@ task GUN_controller() {
 	SensorValue[PRT_gunLeftQuad] = 0;
 	SensorValue[PRT_gunRightQuad] = 0;
 
-	while (true) {
+	while (GUN_ENABLED) {
 		GUN_hardWaitCycle();
 		//GUN_sensorCycle();
 	}
