@@ -98,14 +98,14 @@ void PID_cycle(PID_Side index) {
 
 		// Grab the actual sensor value, then scale it (if necessary).
 		PID_lastActual[index] = PID_actual[index];
-		/*if (index == Left) {
+		if (index == Left) {
 			// Retrieve speed in RPM.
 			PID_actual[index] = (SensorValue[PRT_gunLeftQuad] * PID_INPUT_SCALE) / PID_delta[index] * PID_INPUT_MIRROR[index];
 			SensorValue[PRT_gunLeftQuad] = 0; // Clear encoder.
 		} else if (index == Right) {
 			PID_actual[index] = (SensorValue[PRT_gunRightQuad] * PID_INPUT_SCALE) / PID_delta[index] * PID_INPUT_MIRROR[index];
 			SensorValue[PRT_gunRightQuad] = 0;
-		}*/
+		}
 
 		// Record the time between speed measurements.
 		PID_deltaStart[index] = (((float)time1[T1]) / 1000) / 60;
@@ -121,12 +121,12 @@ void PID_cycle(PID_Side index) {
 		// The horse and carrot method is a way of visualizing the movement of the PID's actuator
 		// in relation to the target's movement. The "carrot" (target) is gradually dragged to another location
 		// for the "horse" (actuator) to move to. The carrot does not teleport from one place to another.
-		PID_filteredTarget[index] = PID_SIGNAL_GENERATOR_MAX * PID_lastTarget[index]
+		/*PID_filteredTarget[index] = PID_SIGNAL_GENERATOR_MAX * PID_lastTarget[index]
 				+ (1.00 - PID_SIGNAL_GENERATOR_MAX) * PID_target[index];
-		PID_lastTarget[index] = PID_filteredTarget[index];
+		PID_lastTarget[index] = PID_filteredTarget[index];*/
 		// Disabled for tuning purposes.
-		//PID_filteredTarget[index] = PID_target[index];
-		//PID_lastTarget[index] = PID_filteredTarget[index];
+		PID_filteredTarget[index] = PID_target[index];
+		PID_lastTarget[index] = PID_filteredTarget[index];
 
 		// Calculate the error.
 		PID_error[index] = PID_actual[index] - PID_filteredTarget[index];
