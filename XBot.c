@@ -54,6 +54,7 @@
 // DEPENDENCIES //
 //////////////////
 
+#include "Utilities.c"
 #include "BlinkModule.c"
 #include "BatteryModule.c"
 #include "DriverControlModule.c"

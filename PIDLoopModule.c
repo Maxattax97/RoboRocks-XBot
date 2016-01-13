@@ -23,14 +23,13 @@ const bool PID_DERIVATIVE_ENABLED = false;
 const int PID_POWER_MAX = 127; // Maximum and minimum amount of power for the PID to apply.
 const int PID_POWER_MIN = -127;
 const int PID_INTEGRAL_LIMIT = 50; // Threshold for integral values.
-const int PID_INTERVALS_PER_SECOND = 50; // Rate in hertz that the PID evaluates at.
+const int PID_INTERVALS_PER_SECOND = 15; // Rate in hertz that the PID evaluates at.
 
-const float PID_INPUT_SCALE = (1 / 90) * 3; // Set this to be ENCODER TICKS / REVOLUTION.
-const float PID_INPUT_MIRROR[] = {-1.0, 1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
+float PID_INPUT_SCALE = 0.03333333333333333333333333333333; // Set this to be ENCODER TICKS / REVOLUTION. [(1/90) * 3]
+float PID_INPUT_MIRROR[] = {1.0, -1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
 float PID_SIGNAL_GENERATOR_MAX = 0.99; // Percentage value for "horse and carrot".
 const int PID_SYSTEM_HYSTERESIS = 8; // Solves for motor jogging without breaking PID.
 const float PID_targetMax = 2100; // Maximum speed in RPM.
-
 
 float PID_target[] = {0, 0}; // For setting the target speed. Do not touch.
 float PID_actual[] = {0, 0}; // For detecting actual speed. Do not touch.
@@ -97,6 +96,7 @@ void PID_cycle(PID_Side index) {
 		}
 
 		// Grab the actual sensor value, then scale it (if necessary).
+		//writeDebugStreamLine("quad: %i, scale: %f, delta: %f, mirror: %d", SensorValue[PRT_gunLeftQuad], PID_INPUT_SCALE, PID_delta[index], PID_INPUT_MIRROR[index])
 		PID_lastActual[index] = PID_actual[index];
 		if (index == Left) {
 			// Retrieve speed in RPM.
@@ -230,10 +230,79 @@ void PID_cycle(PID_Side index) {
 	}
 }
 
+// Input range in feet, output angular velocity in RPM.
+float PID_angularSpeedAtRange(float range) {
+	return 515.24 * sqrt(range);
+}
+
+task PID_autoTune() {
+	PID_enabled = true;
+	PID_target[0] = 500;
+	wait1Msec(3000);
+	const int samples = 20;
+	const float magnitude = 0.01;
+	float outputs[samples];
+	float min;
+	float mins[samples];
+	float max;
+	float maxs[samples];
+	writeDebugStreamLine("Tuning with %i samples and magnitude of P change %f.", samples, magnitude);
+	while (true) {
+		min = PID_POWER_MAX;
+		max = PID_POWER_MIN;
+		for (int j = 0; j < samples; j++) {
+			for (int i = 0; i < samples; i++) {
+					outputs[i] = PID_power[0];
+					min = MIN(min, outputs[i]);
+					max = MAX(max, outputs[i]);
+					wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
+			}
+			writeDebugStreamLine("Min: %f, Max: %f for sample %i.", min, max, j);
+			mins[j] = min;
+			maxs[j] = max;
+		}
+		float lastMin = mins[0];
+		float lastMax = maxs[0];
+		int growing = 0;
+		int shrinking = 0;
+		int identical = 0;
+		for (int i = 1; i < samples; i++) {
+			if (mins[i] < lastMin)
+				growing++;
+			else if (mins[i] > lastMin)
+				shrinking++;
+			else
+				identical++;
+
+			if (maxs[i] > lastMax)
+				growing++;
+			else if (maxs[i] < lastMax)
+				shrinking++;
+			else
+				identical++;
+
+			lastMin = mins[i];
+			lastMax = maxs[i];
+		}
+		if (growing > shrinking && growing > identical) {
+			PID_KP -= magnitude;
+			writeDebugStreamLine("Tune Score: G%i/S%i/I%i. Decreasing P to %f.", growing, shrinking, identical, PID_KP);
+		}	else if (shrinking > growing && shrinking > identical) {
+			PID_KP += magnitude;
+			writeDebugStreamLine("Tune Score: G%i/S%i/I%i. Increasing P to %f.", growing, shrinking, identical, PID_KP);
+		} else {
+			writeDebugStreamLine("Tune Score: G%i/S%i/I%i. P = %f. TUNE COMPLETE.", growing, shrinking, identical, PID_KP);
+			PID_target[0] = 0;
+			return;
+		}
+	}
+}
+
 task PID_controller() {
 	//bool batLowRetrieved = false;
 	PID_deltaStart[Left] = ((float)time1[T1]) / 1000;
 	PID_deltaStart[Right] = ((float)time1[T1]) / 1000;
+	wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
 	while (true) {
 		// Run each individual cycle per system.
 		PID_cycle(Left);
@@ -250,6 +319,10 @@ task PID_controller() {
 		} else if (BAT_low == false) {
 			batLowRetrieved = false;
 		}*/
+
+		if (nTimeXX == 30) {
+			startTask(PID_autoTune);
+		}
 
 		// Repeat at defined delta time, in Hertz.
 		wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
