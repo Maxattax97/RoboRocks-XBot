@@ -1,5 +1,5 @@
 #pragma config(Sensor, dgtl1,  PRT_gunLeftQuad, sensorQuadEncoder)
-#pragma config(Sensor, dgtl3,  PRT_gunRightQuad, sensorQuadEncoder)
+#pragma config(Sensor, dgtl4,  PRT_gunRightQuad, sensorQuadEncoder)
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
@@ -88,6 +88,10 @@ void pre_auton()
 	startTask(BAT_monitor);
 
 	// Reset sensors.
+	SensorType[PRT_gunLeftQuad] = sensorNone; // JPearman said to do this.
+	SensorType[PRT_gunLeftQuad] = sensorQuadEncoder; // Resets encoders in RobotC, fixes error.
+	SensorType[PRT_gunRightQuad] = sensorNone;
+	SensorType[PRT_gunRightQuad] = sensorQuadEncoder;
 	SensorValue[PRT_gunLeftQuad] = 0;
 	SensorValue[PRT_gunRightQuad] = 0;
 
