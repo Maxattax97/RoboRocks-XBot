@@ -28,7 +28,7 @@ enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeft
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
 bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
-const int DRV_JOYSTICK_THRESHOLD = 5; // The trim for the joystick values.
+const int DRV_JOYSTICK_THRESHOLD = 10; // The trim for the joystick values.
 const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
 
 void DRV_setupConfig() {
@@ -48,7 +48,7 @@ void DRV_setupConfig() {
 	DRV_config[OmniRotate] = UNASSIGNED; // Joystick channel that turns omni wheels left and right.
 	DRV_config[OmniMirrorForward] = UNASSIGNED; // Joystick channel that moves omni wheels forward and backward in a mirrored fashion.
 	DRV_config[OmniMirrorRotate] = UNASSIGNED; // Joystick channel that turns omni wheels left and right in a mirrored fashion.
-	DRV_config[ToggleMirror] = Btn7D; // Toggles the reversing/mirroring of wheel control.
+	DRV_config[ToggleMirror] = UNASSIGNED; // Toggles the reversing/mirroring of wheel control.
 	DRV_config[FeedLowerIn] = Btn5U; // Lower belt feed pulls items into robot.
 	DRV_config[FeedLowerOut] = Btn5D; // Lower belt feed pushes items out of robot.
 	DRV_config[FeedUpperIn] = Btn6U; // Upper belt feed pulls items into robot.
@@ -59,8 +59,8 @@ void DRV_setupConfig() {
 	DRV_config[GunDecrement] = Btn7D; // Decrements max gun speed.
 	DRV_config[GunSmallIncrement] = Btn7R; // Increments max gun speed by a small amount.
 	DRV_config[GunSmallDecrement] = Btn7L; // Decrements max gun speed by a small amount.
-	DRV_config[Ping] = Btn8R; // Flashes lights on cortex to indicate responsiveness.
-	DRV_config[Override] = Btn7L; // Overrides a subsystem using a two button combination.
+	DRV_config[Ping] = UNASSIGNED; // Flashes lights on cortex to indicate responsiveness.
+	DRV_config[Override] = UNASSIGNED; // Overrides a subsystem using a two button combination.
 
 	if (DRV_CURRENT_DRIVER == Parker) {
 		//// PARKER ////
@@ -78,12 +78,12 @@ void DRV_setupConfig() {
 		DRV_config[MecanumRotate] = UNASSIGNED;
 	} else if (DRV_CURRENT_DRIVER == Zander) {
 		//// ZANDER ////
-		/*DRV_config[OmniRight] = UNASSIGNED;
+		DRV_config[OmniRight] = UNASSIGNED;
 		DRV_config[OmniLeft] = UNASSIGNED;
 		DRV_config[OmniForward] = Ch3;
 		DRV_config[OmniRotate] = Ch4;
 		DRV_config[OmniMirrorForward] = Ch2;
-		DRV_config[OmniMirrorRotate] = Ch1;*/
+		DRV_config[OmniMirrorRotate] = Ch1;
 	} else if (DRV_CURRENT_DRIVER == Ryan) {
 		//// RYAN ////
 		DRV_config[MecanumRightNormal] = Ch3;

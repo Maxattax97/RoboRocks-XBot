@@ -22,15 +22,18 @@ const bool PID_INTEGRAL_ENABLED = true;
 const bool PID_DERIVATIVE_ENABLED = true;
 const int PID_POWER_MAX = 127; // Maximum and minimum amount of power for the PID to apply.
 const int PID_POWER_MIN = 0;
-const int PID_INTEGRAL_LIMIT = 50; // Threshold for integral values.
-int PID_INTERVALS_PER_SECOND = 42; // Rate in hertz that the PID evaluates at.
-int PID_QUAD_MAX = 32767;
-int PID_QUAD_MIN = -32768;
+const int PID_INTEGRAL_LIMIT = 100; // Threshold for integral values.
+const int PID_INTERVALS_PER_SECOND = 50; // Rate in hertz that the PID evaluates at.
+const int PID_SPEED_INTERVALS_PER_SECOND = 50;
+const int PID_QUAD_MAX = 32767;
+const int PID_QUAD_MIN = -32768;
 
-float PID_INPUT_SCALE = 120; // Set this to be ENCODER TICKS / REVOLUTION.
-float PID_INPUT_MIRROR[] = {1.0, -1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
-float PID_SIGNAL_GENERATOR_MAX = 0.98; // Percentage value for "horse and carrot".
+const float PID_INPUT_SCALE = 120; // Set this to be ENCODER TICKS / REVOLUTION.
+const float PID_INPUT_MIRROR[] = {1.0, -1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
+float PID_SIGNAL_GENERATOR_MAX = 0.995; // Percentage value for "horse and carrot".
 const int PID_SYSTEM_HYSTERESIS = 8; // Solves for motor jogging without breaking PID.
+const int PID_DEADBAND = 30; // Amount of power to apply to turn wheels minimally.
+const float PID_DEADBAND_THRESHOLD = 120; // Must be moving under this speed to apply deadband.
 const float PID_targetMax = 2100; // Maximum speed in RPM.
 
 float PID_target[] = {0, 0}; // For setting the target speed. Do not touch.
@@ -38,6 +41,9 @@ float PID_actual[] = {0, 0}; // For detecting actual speed. Do not touch.
 float PID_deltaStart[] = {0, 0}; // For calculating speed of flywheel.
 float PID_delta[] = {0, 0};
 float PID_lastQuad[] = {0, 0};
+const int PID_HISTORY_LENGTH = 5;
+float PID_actualHistory[2][PID_HISTORY_LENGTH];
+int PID_historyIndex[] = {0, 0};
 
 float PID_filteredTarget[] = {0, 0}; // Target with signal generator applied (horse and carrot).
 float PID_power[] = {0, 0}; // Motor power requested to acquire target speed.
@@ -48,22 +54,22 @@ float PID_derivative[] = {0, 0}; // For prediction of incoming error.
 float PID_lastTarget[] = {0, 0}; // For signal generator calculation.
 float PID_lastActual[] = {0, 0}; // For calculation of derivative.
 
-const int PID_OVERLOAD_THRESHOLD = 450; // If the PID is behind this much, activates overload blink task.
+const int PID_OVERLOAD_THRESHOLD = 300; // If the PID is behind this much, activates overload blink task.
 short PID_blinkIdDisabled[] = {NULL, NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL, NULL};
 
 // PID Loop constants for Proportional, Integral, and Derivative (Items in the acronym PID).
-float PID_KU = 1;
-float PID_TU = 0.15953846153846153846153846153846;
-float PID_KP = 1; //PID_POWER_MAX / PID_targetMax
-float PID_KI = 0;
+const float PID_KU = 1.333;
+const float PID_TU = 0.018;
+float PID_KP = 0.6;
+float PID_KI = 0.015;
 float PID_KD = 0;
 /*
 Ziegler-Nichols Method for Tuning PID Loops
 
 	 1. Adjust Kp until oscillates evenly (oscillation does not gain or lose).
 	 2. Ku = current Kp.
-	 3. Time to complete one revolution = Tu.
+	 3. Period of oscillation = Tu.
 	 4. Follow table:
 
 	 Type |   Kp   |    Ki    |   Kd
@@ -71,6 +77,9 @@ Ziegler-Nichols Method for Tuning PID Loops
 	   PI | 0.45Ku |   Tu/1.2 |      -
 	   PD | 0.80Ku |        - |   Tu/8
 	  PID | 0.60Ku |     Tu/2 |   Tu/8
+Tyreus-Luyben
+     PI | Ku/3.2 |    2.2Tu |      -
+    PID | Ku/2.2 |    2.2Tu | Tu/6.3
 */
 
 /*
@@ -93,34 +102,6 @@ float PID_internals[2][8];*/
 // A single PID cycle.
 void PID_cycle(PID_Side index) {
 	if (PID_enabled) {
-		// Determine how much time has elapsed (in minutes for RPM).
-		PID_delta[index] = ((((float)time1[T1]) / 1000) / 60) - PID_deltaStart[index];
-		if (PID_delta[index] <= 0) {
-			writeDebugStreamLine("[PID] Running too fast (delta = 0s)! Skipping cycle.");
-			return;
-		}
-
-		// Grab the actual sensor value, then scale it (if necessary).
-		//writeDebugStreamLine("quad: %i, scale: %f, delta: %f, mirror: %d", SensorValue[PRT_gunLeftQuad], PID_INPUT_SCALE, PID_delta[index], PID_INPUT_MIRROR[index])
-		PID_lastActual[index] = PID_actual[index];
-		if (index == Left) {
-			// Retrieve speed in RPM.
-			int ticks = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunLeftQuad]) - PID_lastQuad[index];
-			if (ticks < 0)
-				ticks += (-1 * PID_QUAD_MIN) + PID_QUAD_MAX;
-			PID_lastQuad[index] = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunLeftQuad]);
-			PID_actual[index] = (ticks / PID_INPUT_SCALE) / PID_delta[index];
-		} else if (index == Right) {
-			int ticks = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunRightQuad]) - PID_lastQuad[index];
-			if (ticks < 0)
-				ticks += (-1 * PID_QUAD_MIN) + PID_QUAD_MAX;
-		  PID_lastQuad[index] = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunLeftQuad]);
-			PID_actual[index] = (ticks / PID_INPUT_SCALE) / PID_delta[index];
-		}
-
-		// Record the time between speed measurements.
-		PID_deltaStart[index] = (((float)time1[T1]) / 1000) / 60;
-
 		// Cap the target so it doesn't get too crazy.
 		if (PID_target[index] > PID_targetMax) {
 			PID_target[index] = PID_targetMax;
@@ -132,12 +113,14 @@ void PID_cycle(PID_Side index) {
 		// The horse and carrot method is a way of visualizing the movement of the PID's actuator
 		// in relation to the target's movement. The "carrot" (target) is gradually dragged to another location
 		// for the "horse" (actuator) to move to. The carrot does not teleport from one place to another.
-		PID_filteredTarget[index] = PID_SIGNAL_GENERATOR_MAX * PID_lastTarget[index]
-				+ (1.00 - PID_SIGNAL_GENERATOR_MAX) * PID_target[index];
+		// In this case, however, we WILL teleport the carrot. But only to a lower place than before...
+		if (PID_target[index] < PID_lastTarget[index]) {
+			PID_filteredTarget[index] = PID_target[index];
+		} else {
+			PID_filteredTarget[index] = PID_SIGNAL_GENERATOR_MAX * PID_lastTarget[index]
+					+ (1.00 - PID_SIGNAL_GENERATOR_MAX) * PID_target[index];
+		}
 		PID_lastTarget[index] = PID_filteredTarget[index];
-		// Disabled for tuning purposes.
-		//PID_filteredTarget[index] = PID_target[index];
-		//PID_lastTarget[index] = PID_filteredTarget[index];
 
 		// Calculate the error.
 		PID_error[index] = PID_actual[index] - PID_filteredTarget[index];
@@ -148,9 +131,9 @@ void PID_cycle(PID_Side index) {
 
 		if (PID_INTEGRAL_ENABLED && PID_KI != 0) {
 			// Accumulate error to fill the gap.
-			if (abs(PID_error[index]) < PID_INTEGRAL_LIMIT) {
+			//if (abs(PID_error[index]) < PID_INTEGRAL_LIMIT) {
 				PID_integral[index] += PID_error[index];
-			}
+			//}
 		} else {
 			PID_integral[index] = 0;
 		}
@@ -180,15 +163,11 @@ void PID_cycle(PID_Side index) {
 		// motor is actually moving toward its goal. Only apply deadband if below the
 		// deadband threshold.
 		// Disabled for tuning purposes.
-		/*if (PID_power[index] > 0 && PID_power[index] < PID_POWER_POSITIVE_DEADBAND
-				&& PID_POWER_POSITIVE_DEADBAND != 0 && PID_power[index] != 0
-				&& PID_actual[index] > PID_DEADBAND_THRESHOLD) {
-			PID_power[index] = PID_POWER_POSITIVE_DEADBAND;
-		} else if (PID_power[index] < 0 && PID_power[index] > PID_POWER_NEGATIVE_DEADBAND
-				&& PID_POWER_NEGATIVE_DEADBAND != 0 && PID_power[index] != 0
-				&& PID_actual[index] > (-1 * PID_DEADBAND_THRESHOLD)) {
-			PID_power[index] = PID_POWER_NEGATIVE_DEADBAND;
-		}*/
+		if (PID_power[index] > 0 && PID_power[index] < PID_DEADBAND
+				&& PID_DEADBAND != 0 && PID_power[index] != 0
+				&& PID_actual[index] < PID_DEADBAND_THRESHOLD) {
+			PID_power[index] = PID_DEADBAND;
+		}
 
 		// Set the motor power value.
 		// Type cast to keep from wrongly setting the motors.
@@ -313,19 +292,50 @@ task PID_autoTune() {
 		}
 	}
 }
-/*
-task PID_SPEED_loop() {
+
+task PID_speedLoop() {
+	writeDebugStreamLine("[PID]: Speed sampler started.");
 	while (true) {
-		// PID_actual[index] = (SensorValue[PRT_gunLeftQuad] / PID_INPUT_SCALE) / PID_delta[index] * PID_INPUT_MIRROR[index];
-		int ticks = SensorValue[PRT_gunLeftQuad] - PID_SPEED_quadLast[Left];
-		if (ticks < 0) {
-			ticks += (-1 * PID_SPEED_QUAD_MIN) + PID_SPEED_QUAD_MAX;
+		for (short index = Left; index < Right + 1; index++) {
+			// Determine how much time has elapsed (in minutes for RPM).
+			PID_delta[index] = ((((float)time1[T1]) / 1000) / 60) - PID_deltaStart[index];
+			if (PID_delta[index] > 0) {
+				// Grab the actual sensor value, then scale it (if necessary).
+				//writeDebugStreamLine("quad: %i, scale: %f, delta: %f, mirror: %d", SensorValue[PRT_gunLeftQuad], PID_INPUT_SCALE, PID_delta[index], PID_INPUT_MIRROR[index])
+				PID_lastActual[index] = PID_actual[index];
+				int ticks = 0;
+				if (index == Left) {
+					ticks = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunLeftQuad]) - PID_lastQuad[index];
+					PID_lastQuad[index] = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunLeftQuad]);
+				}
+				else if (index == Right) {
+					ticks = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunRightQuad]) - PID_lastQuad[index];
+					PID_lastQuad[index] = (PID_INPUT_MIRROR[index] * SensorValue[PRT_gunRightQuad]);
+				}
+
+				// Retrieve speed in RPM.
+				if (ticks < 0) {
+					ticks += (-1 * PID_QUAD_MIN) + PID_QUAD_MAX;
+				}
+				PID_actualHistory[index][PID_historyIndex[index]] = (ticks / PID_INPUT_SCALE) / PID_delta[index];
+				PID_historyIndex[index]++;
+				if (PID_historyIndex[index] == PID_HISTORY_LENGTH) {
+					PID_historyIndex[index] = 0;
+				}
+				float sum = 0;
+				for (int i = 0; i < PID_HISTORY_LENGTH; i++) {
+					sum += PID_actualHistory[index][i];
+				}
+				PID_actual[index] = sum / PID_HISTORY_LENGTH;
+				//if (index == Left && PID_actual[index] != 0)
+				//	writeDebugStreamLine("%f, %f, %f", PID_delta[index], (ticks / PID_INPUT_SCALE) / PID_delta[index], PID_actual[index]);
+				// Record the time between speed measurements.
+				PID_deltaStart[index] = (((float)time1[T1]) / 1000) / 60;
+			}
 		}
-		int revs = ticks / PID_INPUT_SCALE;
-		int speed = revs / delta
-		wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
+		wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
 	}
-}*/
+}
 
 bool PID_capture = false;
 
@@ -334,13 +344,18 @@ task PID_controller() {
 	PID_deltaStart[Left] = ((float)time1[T1]) / 1000;
 	PID_deltaStart[Right] = ((float)time1[T1]) / 1000;
 	wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
+	startTask(PID_speedLoop);
 	while (true) {
 		// Run each individual cycle per system.
 		PID_cycle(Left);
-		if (PID_capture == true)
-			writeDebugStreamLine("%f, %f, %f, %f", ((float)time1[T1]) / 1000, PID_actual[Left], PID_power[Left], PID_error[Left]);
 		PID_cycle(Right);
-
+		if (PID_capture == true && PID_power > 0)
+			writeDebugStreamLine("%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f",
+				((float)time1[T1]) / 1000, PID_filteredTarget[Left], PID_actual[Left], PID_power[Left], PID_error[Left],
+				PID_filteredTarget[Right], PID_actual[Right], PID_power[Right], PID_error[Right]);
+		//if (PID_capture == true && motor[PRT_gunLeft1] > 0)
+			//writeDebugStreamLine("%f, %f",
+			//	((float)time1[T1]) / 1000, PID_actual[Left]);
 		/*// Check the battery to initiate emergency PID shut off.
 		if (batLowRetrieved == false && BAT_low == true) {
 			batLowRetrieved = true;
@@ -355,7 +370,9 @@ task PID_controller() {
 
 		if (PID_runTuner == true && PID_tunerRunning == false) {
 			PID_runTuner = false;
-			startTask(PID_autoTune);
+			PID_capture = true;
+			PID_target[Left] = 2100;
+			PID_target[Right] = 2100;
 		}
 
 		// Repeat at defined delta time, in Hertz.

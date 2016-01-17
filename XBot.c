@@ -1,5 +1,6 @@
 #pragma config(Sensor, dgtl1,  PRT_gunLeftQuad, sensorQuadEncoder)
 #pragma config(Sensor, dgtl4,  PRT_gunRightQuad, sensorQuadEncoder)
+#pragma config(Sensor, dgtl6,  PRT_sonar,      sensorSONAR_raw)
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
@@ -235,10 +236,14 @@ task usercontrol()
 			motor[PRT_wheelBackRight]  = DRV_trimChannel(OmniRight) * reverseMultiplier;
 		} else if (DRV_config[OmniForward] != UNASSIGNED && DRV_config[OmniRotate] != UNASSIGNED) {
 			// 2 channel (smart) drive for OMNI WHEELS enabled.
-			motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+			if ((DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED)
+				&& (DRV_trimChannel(OmniForward) != 0 || DRV_trimChannel(OmniRotate) != 0)) {
+				// To prevent setting motors to 0
+				motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+				motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+				motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+				motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+			}
 		} else if (DRV_config[MecanumRotate] == UNASSIGNED) {
 			// 4 channel (tank) drive for MECANUM WHEELS enabled.
 			int threshold = 20;
@@ -298,13 +303,15 @@ task usercontrol()
     		+ DRV_trimChannel(MecanumLeftStrafe);
 		}
 
-		if (DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED) {
+		if (DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED
+			&& (DRV_trimChannel(OmniForward) == 0 && DRV_trimChannel(OmniRotate) == 0)) {
 			// 2 channel (smart) MIRRORED drive for OMNI WHEELS enabled.
-			motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
-			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * -1;
+			motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniMirrorForward) + DRV_trimChannel(OmniMirrorRotate)) * -1;
+			motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniMirrorForward) + DRV_trimChannel(OmniMirrorRotate)) * -1;
+			motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniMirrorForward) - DRV_trimChannel(OmniMirrorRotate)) * -1;
+			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniMirrorForward) - DRV_trimChannel(OmniMirrorRotate)) * -1;
 		}
+
 
 		// Ping
 		// Flashes lights on cortex while ping button is down to indicate responsiveness.
