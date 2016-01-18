@@ -5,16 +5,6 @@
 // robot's individual modules.                                                      //
 //////////////////////////////////////////////////////////////////////////////////////
 
-const float AUT_SONAR_INPUT_SCALE = 147.748; // For interpretting sonar distance. (SONAR TICKS / INCH)
-const float AUT_SONAR_MAX = AUT_SONAR_INPUT_SCALE * 255; // 21.25 feet.
-const float AUT_SONAR_MIN = AUT_SONAR_INPUT_SCALE * 1.1811; // 3 cm.
-
-/*
-Sonar must be placed between 3.81 and 7.38 inches above floor to detect low goal.
-To remove possibility of detecting single balls, 4.00 to 7.38 inches. (Target: 5.9 inches)
-To remove possibility of detecting stacked balls, ~7.27 to 7.38 inches.
-*/
-
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)
 	// Positive is forward, negative is backward.

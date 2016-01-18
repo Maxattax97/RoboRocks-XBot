@@ -3,7 +3,7 @@
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
-#pragma config(Motor,  port1,           feedLower,     tmotorVex393_HBridge, openLoop)
+#pragma config(Motor,  port1,           feedLower,     tmotorVex393_HBridge, openLoop, reversed)
 #pragma config(Motor,  port2,           wheelFrontLeft, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           wheelFrontRight, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port4,           wheelBackLeft, tmotorVex393_MC29, openLoop)
@@ -28,7 +28,7 @@
 
 //Competition Control and Duration Settings
 #pragma competitionControl(Competition)
-#pragma autonomousDuration(20)
+#pragma autonomousDuration(15)
 #pragma userControlDuration(120)
 
 //Main competition background code...do not modify!
@@ -53,7 +53,7 @@ task guncontrol()
 {
 	while (true) {
 		while (warmGuns) {
-			if (power < 100 && delta <= time1[T1]) {
+			if (power < 80 && delta <= time1[T1]) {
 				power += 10;
 				delta = time1[T1] + 1000;
 			}

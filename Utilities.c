@@ -6,3 +6,4 @@
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+#define LIMIT(lo,hi,val) MIN(MAX(lo, val), hi)

@@ -28,7 +28,7 @@ enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeft
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
 bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
-const int DRV_JOYSTICK_THRESHOLD = 10; // The trim for the joystick values.
+const int DRV_JOYSTICK_THRESHOLD = 15; // The trim for the joystick values.
 const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
 
 void DRV_setupConfig() {
@@ -80,6 +80,7 @@ void DRV_setupConfig() {
 		//// ZANDER ////
 		DRV_config[OmniRight] = UNASSIGNED;
 		DRV_config[OmniLeft] = UNASSIGNED;
+		DRV_config[ToggleMirror] = Btn8L;
 		DRV_config[OmniForward] = Ch3;
 		DRV_config[OmniRotate] = Ch4;
 		DRV_config[OmniMirrorForward] = Ch2;

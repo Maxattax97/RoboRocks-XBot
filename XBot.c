@@ -1,6 +1,7 @@
 #pragma config(Sensor, dgtl1,  PRT_gunLeftQuad, sensorQuadEncoder)
-#pragma config(Sensor, dgtl4,  PRT_gunRightQuad, sensorQuadEncoder)
-#pragma config(Sensor, dgtl6,  PRT_sonar,      sensorSONAR_raw)
+#pragma config(Sensor, dgtl3,  PRT_gunRightQuad, sensorQuadEncoder)
+#pragma config(Sensor, dgtl5,  PRT_sonar,      sensorSONAR_raw)
+#pragma config(Sensor, dgtl9,  PRT_ledGun,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
@@ -58,12 +59,26 @@
 #include "Utilities.c"
 #include "BlinkModule.c"
 #include "BatteryModule.c"
+#include "SonarModule.c"
 #include "DriverControlModule.c"
 #include "GunModule.c"
 #include "PIDLoopModule.c"
 #include "AutonomousModule.c"
 
-//////////////////////////
+///////////////
+// TODO LIST //
+/*/////////////
+
+Add info LED for gun ready on PID (seperate, extended LED with blink speed to indicate nearness?).
+Augment autonomous to polyfit gun modes (PID vs hard).
+Test and improve equation w=515.24sqrt(R).
+Add sonar functionality, with distance locks.
+Monitor battery backup.
+Investigate power expander status port.
+
+And as always, DOCUMENT MORE.
+
+*/////////////////////////
 // PRE-AUTONOMOUS SETUP //
 //////////////////////////
 
@@ -95,6 +110,9 @@ void pre_auton()
 	SensorType[PRT_gunRightQuad] = sensorQuadEncoder;
 	SensorValue[PRT_gunLeftQuad] = 0;
 	SensorValue[PRT_gunRightQuad] = 0;
+
+	// Start sonar updates.
+	startTask(SNR_update);
 
 	// Initialize the gun controller.
 	startTask(GUN_controller);
@@ -164,7 +182,11 @@ task autonomous()
 //// USER CONTROL MODE ////
 ///////////////////////////
 
+const float USR_RANGE_LARGE_INCREMENT = 2; // 1 floor tile.
+const float USR_RANGE_SMALL_INCREMENT = 0.5; // Quarter floor tile.
 short USR_pingId = -1;
+short USR_reverseMultiplier = 1; // Setup the wheel reversal.
+float USR_targetRange = 13; // In feet, how far the ball should go if fired.
 
 // For manual, computer-based value editing.
 bool USR_OVERRIDE_USER_CONTROL = false;
@@ -195,17 +217,21 @@ task usercontrol()
 
 		// Gun Control
 		if (DRV_controllerButtonsDown[GunIncrement] == true) {
+			USR_targetRange += USR_RANGE_LARGE_INCREMENT;
 			GUN_maxMotorPower += GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunDecrement] == true) {
+			USR_targetRange -= USR_RANGE_LARGE_INCREMENT;
 			GUN_maxMotorPower -= GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunDecrement] = false;
 		}
 
 		if (DRV_controllerButtonsDown[GunSmallIncrement] == true) {
+			USR_targetRange += USR_RANGE_SMALL_INCREMENT;
 			GUN_maxMotorPower += GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunSmallDecrement] == true) {
+			USR_targetRange -= USR_RANGE_SMALL_INCREMENT;
 			GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallDecrement] = false;
 		}
@@ -220,29 +246,26 @@ task usercontrol()
 		}*/
 
 		// Wheel Control
-		// Setup the wheel reversal.
-		int reverseMultiplier = 1;
-		// TODO: THIS IS WRONG. AFTER ONE LOOP, WILL RESET. EVENT IS CONSUMED!!!
 		if (DRV_controllerButtonsDown[ToggleMirror] == true) {
-			reverseMultiplier *= -1; // Flip the multiplier's sign.
+			USR_reverseMultiplier *= -1; // Flip the multiplier's sign.
 			DRV_controllerButtonsDown[ToggleMirror] = false; // Consume event.
 		}
 
 		if (DRV_config[OmniLeft] != UNASSIGNED && DRV_config[OmniRight] != UNASSIGNED) {
 			// 2 channel (tank) drive for OMNI WHEELS enabled.
-			motor[PRT_wheelFrontLeft]  = DRV_trimChannel(OmniLeft)  * reverseMultiplier;
-			motor[PRT_wheelBackLeft]   = DRV_trimChannel(OmniLeft)  * reverseMultiplier;
-			motor[PRT_wheelFrontRight] = DRV_trimChannel(OmniRight) * reverseMultiplier;
-			motor[PRT_wheelBackRight]  = DRV_trimChannel(OmniRight) * reverseMultiplier;
+			motor[PRT_wheelFrontLeft]  = DRV_trimChannel(OmniLeft)  * USR_reverseMultiplier;
+			motor[PRT_wheelBackLeft]   = DRV_trimChannel(OmniLeft)  * USR_reverseMultiplier;
+			motor[PRT_wheelFrontRight] = DRV_trimChannel(OmniRight) * USR_reverseMultiplier;
+			motor[PRT_wheelBackRight]  = DRV_trimChannel(OmniRight) * USR_reverseMultiplier;
 		} else if (DRV_config[OmniForward] != UNASSIGNED && DRV_config[OmniRotate] != UNASSIGNED) {
 			// 2 channel (smart) drive for OMNI WHEELS enabled.
 			if ((DRV_config[OmniMirrorForward] != UNASSIGNED && DRV_config[OmniMirrorRotate] != UNASSIGNED)
 				&& (DRV_trimChannel(OmniForward) != 0 || DRV_trimChannel(OmniRotate) != 0)) {
 				// To prevent setting motors to 0
-				motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-				motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-				motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
-				motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * reverseMultiplier;
+				motor[PRT_wheelFrontLeft]  = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * USR_reverseMultiplier;
+				motor[PRT_wheelBackLeft]   = (DRV_trimChannel(OmniForward) + DRV_trimChannel(OmniRotate)) * USR_reverseMultiplier;
+				motor[PRT_wheelFrontRight] = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * USR_reverseMultiplier;
+				motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniForward) - DRV_trimChannel(OmniRotate)) * USR_reverseMultiplier;
 			}
 		} else if (DRV_config[MecanumRotate] == UNASSIGNED) {
 			// 4 channel (tank) drive for MECANUM WHEELS enabled.

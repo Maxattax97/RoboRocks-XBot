@@ -9,8 +9,8 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 // Enum values for different blink task settings.
-enum LED_Level {Info = 1, Warning, Severe, UNASSIGNED = 99};
-enum LED_Rate {Solid = 1, Slow, Medium, Fast, UNASSIGNED = 99};
+enum LED_Level {Info = 1, Warning, Severe, Gun, UNASSIGNED = 99};
+enum LED_Rate {Solid = 1, Slow, Medium, Fast, Irregular, UNASSIGNED = 99};
 
 // LED_Task structure, comparable to OOP's Class.
 typedef struct {
@@ -47,6 +47,8 @@ task LED_blink() {
 						index = PRT_ledY;
 					} else if (LED_tasks[i].level == Severe) {
 						index = PRT_ledR;
+					} else if (LED_tasks[i].level == Gun) {
+						index = PRT_ledGun;
 					}
 
 					// Blink at set rates. There are 6 intervals in a second. Each interval lights an LED based on rate.
@@ -56,9 +58,10 @@ task LED_blink() {
 					// Fast  : [X] [ ] [X] [ ] [X] [ ]
 					// Medium: [X] [ ] [ ] [X] [ ] [ ]
 					// Slow  : [X] [ ] [ ] [ ] [ ] [ ]
+					// Irreg : [X] [ ] [X] [ ] [ ] [ ]
 					if (cycle == 1) {
 						SensorValue[index] = 1;
-					} else if (cycle == 3 && LED_tasks[i].rate == Fast) {
+					} else if (cycle == 3 && (LED_tasks[i].rate == Fast || LED_tasks[i].rate == Irregular)) {
 						SensorValue[index] = 1;
 					} else if (cycle == 4 && LED_tasks[i].rate == Medium) {
 						SensorValue[index] = 1;
