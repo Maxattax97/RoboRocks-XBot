@@ -7,3 +7,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define LIMIT(lo,hi,val) MIN(MAX(lo, val), hi)
+
+float tanDegrees(float nDegrees) {
+	return sinDegrees(nDegrees) / cosDegrees(nDegrees);
+}

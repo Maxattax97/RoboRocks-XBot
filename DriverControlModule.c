@@ -12,7 +12,7 @@
 // Set the DRV_CURRENT_DRIVER variable to whoever is preconfigured.
 // Alternatively, you can also add your own settings.
 // Add a name to DRV_Driver enum, then add configurations in DRV_setupConfig() using an if statement.
-enum DRV_Driver {Default, Parker, Patrick, Zander, Ryan, Sammy};
+enum DRV_Driver {Default, Parker, Zander, Ryan, Sammy};
 // If you are unsure, leave the setting on Default. It is configured to be efficient and intuitive.
 const DRV_Driver DRV_CURRENT_DRIVER = Zander;
 const int DRV_BUTTON_COUNT = 32;
@@ -22,7 +22,7 @@ short DRV_simulatedButtonPress = -1;
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
 	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool, GunIncrement, GunDecrement,
-	GunSmallIncrement, GunSmallDecrement, Ping, Override, UNASSIGNED = 99};
+	GunSmallIncrement, GunSmallDecrement, SonarCapture, Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
@@ -36,7 +36,7 @@ void DRV_setupConfig() {
 	//// DEFAULT ////
 	// Setup default button binds, then let DRV_CURRENT_DRIVER override. No hollow values that way.
 	// Joystick slots should only be channels or UNASSIGNED.
-	// Mecanum controls should never be buttons.
+	// Wheel controls should never be buttons.
 	DRV_config[MecanumRightNormal] = UNASSIGNED; // Joystick channel that controls right side wheels forward and backward movement.
 	DRV_config[MecanumRightStrafe] = UNASSIGNED; // Joystick channel that controls the right side wheels strafing movement.
 	DRV_config[MecanumLeftNormal] = UNASSIGNED; // Joystick channel that controls the left side wheels forward and backward movement.
@@ -59,8 +59,9 @@ void DRV_setupConfig() {
 	DRV_config[GunDecrement] = Btn7D; // Decrements max gun speed.
 	DRV_config[GunSmallIncrement] = Btn7R; // Increments max gun speed by a small amount.
 	DRV_config[GunSmallDecrement] = Btn7L; // Decrements max gun speed by a small amount.
+	DRV_config[SonarCapture] = Btn8R; // Saves current sonar reading to target range.
 	DRV_config[Ping] = UNASSIGNED; // Flashes lights on cortex to indicate responsiveness.
-	DRV_config[Override] = UNASSIGNED; // Overrides a subsystem using a two button combination.
+	DRV_config[Override] = Btn8L; // Overrides the PID loop, and sets back the old, hard-wait gun system.
 
 	if (DRV_CURRENT_DRIVER == Parker) {
 		//// PARKER ////
@@ -69,18 +70,10 @@ void DRV_setupConfig() {
 		DRV_config[MecanumLeftNormal] = Ch3;
 		DRV_config[MecanumLeftStrafe] = Ch4;
 		DRV_config[MecanumRotate] = Ch1;
-	} else if (DRV_CURRENT_DRIVER == Patrick) {
-		//// PATRICK ////
-		DRV_config[MecanumRightNormal] = Ch2;
-		DRV_config[MecanumRightStrafe] = Ch1;
-		DRV_config[MecanumLeftNormal] = Ch3;
-		DRV_config[MecanumLeftStrafe] = Ch4;
-		DRV_config[MecanumRotate] = UNASSIGNED;
 	} else if (DRV_CURRENT_DRIVER == Zander) {
 		//// ZANDER ////
 		DRV_config[OmniRight] = UNASSIGNED;
 		DRV_config[OmniLeft] = UNASSIGNED;
-		DRV_config[ToggleMirror] = Btn8L;
 		DRV_config[OmniForward] = Ch3;
 		DRV_config[OmniRotate] = Ch4;
 		DRV_config[OmniMirrorForward] = Ch2;
@@ -111,10 +104,12 @@ int DRV_trimChannel(DRV_RemoteFunction channel, int trim = DRV_JOYSTICK_THRESHOL
 	return value;
 }
 
+#if DEBUG == 1
 // Simulates a button press for debugging or controls.
 void DRV_simulateButtonPress(short button) {
 	DRV_simulatedButtonPress = button;
 }
+#endif
 
 // The loop that handles button down "events".
 task DRV_buttonHandler()

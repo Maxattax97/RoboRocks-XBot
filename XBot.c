@@ -69,10 +69,6 @@
 // TODO LIST //
 /*/////////////
 
-Add info LED for gun ready on PID (seperate, extended LED with blink speed to indicate nearness?).
-Augment autonomous to polyfit gun modes (PID vs hard).
-Test and improve equation w=515.24sqrt(R).
-Add sonar functionality, with distance locks.
 Monitor battery backup.
 Investigate power expander status port.
 
@@ -142,35 +138,39 @@ task autonomous()
 {
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
-	//AUT_demonstrate();
 	writeDebugStreamLine("[Auton]: Warming guns...");
-	AUT_warmGuns();
-	while (GUN_power < GUN_maxMotorPower) { // Max power changed
+	PID_target[Left] = SNR_angularSpeedAtRange(13 * 12);
+	PID_target[Right] = PID_target[Left];
+	while (!PID_ready) {
 		wait1Msec(50);
 	}
-	//wait1Msec(1000);
 	writeDebugStreamLine("[Auton]: Guns warmed. Firing ball 1.");
-	//AUT_feedUpper(127, 1); // Fire first ball.
-	motor[PRT_feedUpper] = 127;
-	wait1Msec(500);
-	motor[PRT_feedUpper] = 0;
-	wait1Msec(2000);
+	PID_firingBall = true;
+	AUT_feedUpper(127);
+	while (PID_firingBall == true) {
+		wait1Msec(50);
+	}
+	writeDebugStreamLine("[Auton]: Ball fired!");
+	AUT_feedUpper(0);
 	for (int i = 0; i < 3; i++) {
-			motor[PRT_feedLower] = 127;
-			motor[PRT_feedUpper] = 127;
-			//AUT_feedLower(127); // Enable feeds.
-			//AUT_feedUpper(127);
-			writeDebugStreamLine("[Auton]: Firing ball %i.", i + 2);
-			//AUT_surge(127, 1); // Move forward onto ball.
-			wait1Msec(2500);
-			writeDebugStreamLine("[Auton]: Ball fired.");
-			//AUT_feedLower(0); // Disable feeds.
-			//AUT_feedUpper(0);
-			motor[PRT_feedLower] = 0;
-			motor[PRT_feedUpper] = 0;
-			//AUT_surge(-127, 1); // Move back into place.
-			writeDebugStreamLine("[Auton]: Allowing guns to adjust.");
-			wait1Msec(2000);
+			while (!PID_ready) { // Max power changed
+				wait1Msec(50);
+			}
+			writeDebugStreamLine("[Auton]: Firing ball %i...", i + 2);
+			PID_firingBall = true;
+			AUT_feedLower(127);
+			AUT_feedUpper(127);
+			if (i + 2 == 4) {
+				// Wiggle the last ball out.
+				AUT_surge(64, 0.5);
+				AUT_surge(-64, 0.5);
+			}
+			while (PID_firingBall == true) {
+				wait1Msec(50);
+			}
+			writeDebugStreamLine("[Auton]: Ball fired!");
+			AUT_feedLower(0);
+			AUT_feedUpper(0);
 	}
 	writeDebugStreamLine("[Auton]: Shutting down.");
 	AUT_shutDown();
@@ -182,14 +182,17 @@ task autonomous()
 //// USER CONTROL MODE ////
 ///////////////////////////
 
-const float USR_RANGE_LARGE_INCREMENT = 2; // 1 floor tile.
-const float USR_RANGE_SMALL_INCREMENT = 0.5; // Quarter floor tile.
+const float USR_DEFAULT_RANGE = 13 * 12;
+const float USR_RANGE_LARGE_INCREMENT = 2 * 12; // 1 floor tile.
+const float USR_RANGE_SMALL_INCREMENT = 0.5 * 12; // Quarter floor tile.
 short USR_pingId = -1;
+short USR_sonarId = -1;
 short USR_reverseMultiplier = 1; // Setup the wheel reversal.
-float USR_targetRange = 13; // In feet, how far the ball should go if fired.
+float USR_targetRange = USR_DEFAULT_RANGE; // In feet, how far the ball should go if fired.
 
 // For manual, computer-based value editing.
 bool USR_OVERRIDE_USER_CONTROL = false;
+bool USR_FORCE_AUTON = false;
 #if (DEBUG == 1)
 USR_OVERRIDE_USER_CONTROL = true;
 #endif
@@ -217,33 +220,74 @@ task usercontrol()
 
 		// Gun Control
 		if (DRV_controllerButtonsDown[GunIncrement] == true) {
-			USR_targetRange += USR_RANGE_LARGE_INCREMENT;
-			GUN_maxMotorPower += GUN_LARGE_INCREMENT;
+			if (PID_enabled == true)
+				USR_targetRange += USR_RANGE_LARGE_INCREMENT;
+			else if (GUN_enabled == true)
+				GUN_maxMotorPower += GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunDecrement] == true) {
-			USR_targetRange -= USR_RANGE_LARGE_INCREMENT;
-			GUN_maxMotorPower -= GUN_LARGE_INCREMENT;
+			if (PID_enabled == true)
+				USR_targetRange -= USR_RANGE_LARGE_INCREMENT;
+			else if (GUN_enabled == true)
+				GUN_maxMotorPower -= GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunDecrement] = false;
 		}
 
 		if (DRV_controllerButtonsDown[GunSmallIncrement] == true) {
-			USR_targetRange += USR_RANGE_SMALL_INCREMENT;
-			GUN_maxMotorPower += GUN_SMALL_INCREMENT;
+			if (PID_enabled == true)
+				USR_targetRange += USR_RANGE_SMALL_INCREMENT;
+			else if (GUN_enabled == true)
+				GUN_maxMotorPower += GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunSmallDecrement] == true) {
-			USR_targetRange -= USR_RANGE_SMALL_INCREMENT;
-			GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
+			if (PID_enabled == true)
+				USR_targetRange -= USR_RANGE_SMALL_INCREMENT;
+			else if (GUN_enabled == true)
+				GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallDecrement] = false;
 		}
 
+		if (PID_target[Left] != 0 || PID_target[Right] != 0) {
+			float dist = SNR_angularSpeedAtRange(USR_targetRange);
+			if (dist != SNR_INVALID) {
+				PID_target[Left] = dist;
+				PID_target[Right] = dist;
+			}
+		}
+
 		if (DRV_controllerButtonsDown[GunWarm] == true) {
-			GUN_maxMotorPower = GUN_DEFAULT_POWER;
-			GUN_warming = !GUN_warming;
+			if (PID_enabled == true) {
+				if (PID_target[Left] != 0 || PID_target[Right] != 0) {
+					PID_target[Left] = 0;
+					PID_target[Right] = 0;
+					USR_targetRange = USR_DEFAULT_RANGE;
+				} else {
+					PID_target[Left] = SNR_angularSpeedAtRange(USR_targetRange);
+					PID_target[Right] = PID_target[Left];
+				}
+			} else if (GUN_enabled == true) {
+				GUN_maxMotorPower = GUN_DEFAULT_POWER;
+				GUN_warming = !GUN_warming;
+			}
 			DRV_controllerButtonsDown[GunWarm] = false;
-		}/* else if (DRV_controllerButtonsDown[GunSpool] == true) {
-			GUN_spool = !GUN_spool;
-			DRV_controllerButtonsDown[GunSpool] = false;
-		}*/
+		}
+
+		// Sonar Capture
+		if (vexRT[DRV_config[SonarCapture]] == true) {
+			float dist = SNR_distanceInches;
+			if (SNR_validRange(dist)) {
+				USR_targetRange = dist;
+				if (PID_target[Left] != 0 || PID_target[Right] != 0) {
+					PID_target[Left] = SNR_angularSpeedAtRange(USR_targetRange);
+					PID_target[Right] = PID_target[Left];
+				}
+			} else if (USR_sonarId == -1) {
+				USR_sonarId = LED_startBlinkTask(Warning, Solid);
+			}
+		} else if (USR_sonarId != -1) {
+			if (LED_stopBlinkTask(USR_sonarId))
+				USR_sonarId = -1;
+		}
 
 		// Wheel Control
 		if (DRV_controllerButtonsDown[ToggleMirror] == true) {
@@ -335,7 +379,6 @@ task usercontrol()
 			motor[PRT_wheelBackRight]  = (DRV_trimChannel(OmniMirrorForward) - DRV_trimChannel(OmniMirrorRotate)) * -1;
 		}
 
-
 		// Ping
 		// Flashes lights on cortex while ping button is down to indicate responsiveness.
 		if (vexRT[DRV_config[Ping]] && USR_pingId == -1) {
@@ -348,17 +391,22 @@ task usercontrol()
 		// Override controls
 		if (DRV_controllerButtonsDown[Override] == true) {
 			// If a combination of the override button and a system button are pressed, toggle that particular system's PID.
-			/*if (vexRT[DRV_config[LiftUp]] == true || vexRT[DRV_config[LiftDown]] == true
-					|| DRV_trimChannel(LiftJoy) != 0) {
-				// Toggle the main lift system then reset motors.
-				PID_enabled[MainLift] = !PID_enabled[MainLift];
-				motor[PRT_leftLiftMotors] = 0;
-				motor[PRT_rightLiftMotors] = 0;
-				// Indicate to the DriverControlModule that we have recieved the button press.
+			// Toggle the PID then reset motors.
+			GUN_enabled = !GUN_enabled;
+			PID_enabled = !PID_enabled;
+			motor[PRT_gunLeft1] = 0;
+			motor[PRT_gunLeft2] = 0;
+			motor[PRT_gunRight1] = 0;
+			motor[PRT_gunRight2] = 0;
 
-				DRV_controllerButtonsDown[Override] = false;
-			}*/
-			// No systems were designated. Exit WITHOUT accepting button down event.
+
+			// Indicate to the DriverControlModule that we have recieved the button press.
+			DRV_controllerButtonsDown[Override] = false;
+		}
+
+		if (USR_FORCE_AUTON) {
+			startTask(autonomous);
+			break;
 		}
 	}
 	writeDebugStreamLine("[Mode]: User Control mode disabled.");

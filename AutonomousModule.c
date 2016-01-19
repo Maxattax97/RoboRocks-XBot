@@ -5,6 +5,8 @@
 // robot's individual modules.                                                      //
 //////////////////////////////////////////////////////////////////////////////////////
 
+const float AUT_target = SNR_angularSpeedAtRange(13);
+
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)
 	// Positive is forward, negative is backward.
@@ -81,31 +83,53 @@ void AUT_feedUpper(int power = 127, float time = 0) {
 }
 
 void AUT_warmGuns() {
-	GUN_spool = false;
-	GUN_warming = true;
+	if (GUN_enabled) {
+		GUN_spool = false;
+		GUN_warming = true;
+	} else if (PID_enabled) {
+		PID_target[Left] = AUT_target;
+		PID_target[Right] = AUT_target;
+	}
 }
 
 void AUT_coolGuns() {
-	GUN_warming = false;
-	GUN_spool = false;
+	if (GUN_enabled) {
+		GUN_warming = false;
+		GUN_spool = false;
+	} else if (PID_enabled) {
+		PID_target[Left] = 0;
+		PID_target[Right] = 0;
+	}
 }
-
+/*
 void AUT_spoolGuns() {
 	GUN_warming = false;
 	GUN_spool = true;
 }
-
+*/
 void AUT_fireOnce() {
 	AUT_warmGuns();
-	while (GUN_power < 127) {
-		wait1Msec(50);
+	if (GUN_enabled) {
+		while (GUN_power < 127) {
+			wait1Msec(50);
+		}
+		AUT_feedLower(127);
+		AUT_feedUpper(127);
+		wait1Msec(1500);
+		AUT_coolGuns();
+		motor[PRT_feedLower] = 0;
+		motor[PRT_feedUpper] = 0;
+	} else if (PID_enabled) {
+		while (!PID_ready) {
+			wait1Msec(50);
+		}
+		AUT_feedLower(127);
+		AUT_feedUpper(127);
+		wait1Msec(1500);
+		AUT_coolGuns();
+		motor[PRT_feedLower] = 0;
+		motor[PRT_feedUpper] = 0;
 	}
-	AUT_feedLower(127);
-	AUT_feedUpper(127);
-	wait1Msec(1500);
-	AUT_coolGuns();
-	motor[PRT_feedLower] = 0;
-	motor[PRT_feedUpper] = 0;
 }
 
 void AUT_shutDown() {
@@ -114,7 +138,7 @@ void AUT_shutDown() {
 	motor[PRT_feedLower] = 0;
 	motor[PRT_feedUpper] = 0;
 }
-
+/*
 void AUT_demonstrate() {
 	writeDebugStreamLine("[Auton]: Enabling autonomous demonstration procedure.");
 	writeDebugStreamLine("[Auton]: Surging forward...");
@@ -136,3 +160,4 @@ void AUT_demonstrate() {
 	writeDebugStreamLine("[Auton]: Shutting down...");
 	writeDebugStreamLine("[Auton]: Autonomous demonstration procedure complete.");
 }
+*/

@@ -117,7 +117,7 @@ bool LED_stopBlinkTask(short identifier) {
 		return false;
 	}
 }
-
+/*
 LED_Level LED_getBlinkTaskLevel(short identifier) {
 	return LED_tasks[identifier].level;
 }
@@ -125,13 +125,13 @@ LED_Level LED_getBlinkTaskLevel(short identifier) {
 LED_Rate LED_getBlinkTaskRate(short identifier) {
 	return LED_tasks[identifier].rate;
 }
-
+*/
 void LED_editBlinkTask(short identifier, LED_Level level, LED_Rate rate) {
 	LED_tasks[identifier].level = level;
 	LED_tasks[identifier].rate = rate;
 }
 
-// Clear the blink task memory.
+/* Clear the blink task memory.
 void LED_clearBlinkTasks() {
 	for (int i = 0; i < (sizeof(LED_tasks) / 4); i++) {
 		LED_tasks[i].level = UNASSIGNED;
@@ -141,3 +141,4 @@ void LED_clearBlinkTasks() {
 	SensorValue[PRT_ledY] = 0;
 	SensorValue[PRT_ledR] = 0;
 }
+*/

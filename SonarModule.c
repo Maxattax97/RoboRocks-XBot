@@ -8,11 +8,20 @@
 const float SNR_INPUT_SCALE = 147.748; // For interpretting sonar distance. (SONAR TICKS / INCH)
 const float SNR_MAX = 240; // 20 feet.
 const float SNR_MIN = 2; // 2 inches.
-const char SNR_INVALID = -1; // Designates a value that is too close or too long to be accurate.
+const signed char SNR_INVALID = -88; // Designates a value that is too close or too long to be accurate.
 float SNR_distanceInches = 0; // Distance from sonar to focused object in inches.
-const float SNR_gunOffset = 1; // Distance from front of gun to front of sonar in inches.
-const float SNR_netOffset = 5; // Distance from the front of the low goal to the middle of the net opening.
 const int SNR_FREQUENCY = 10; // In hertz, how fast sonar calculations will be made.
+
+const float SNR_GUN_OFFSET = 1.5; // Distance from front of gun to front of sonar in inches.
+const float SNR_NET_OFFSET = 0; //21.696; // Distance from the front of the low goal to the middle of the net opening.
+const float SNR_GUN_ANGLE = 23; // Inclination in degrees of gun.
+const float SNR_GRAVITY = 386.088; // Acceleration in inches/s^2 of gravity.
+const float SNR_GUN_HEIGHT = 13; // Height in inches of the gun from the ground.
+const float SNR_NET_HEIGHT = 36.16; // Lower height of net opening in inches.
+const float SNR_BALL_RADIUS = 2; // Radius of a game ball in inches.
+const float SNR_IPS_TO_RPM = 4.774648294; // Constant to multiply by inches/s to acquire rev/min.
+const float SNR_RANGE_MIN = 67.3025796; // Range that is too close for a successful shot.
+const float SNR_RANGE_MAX = 278.022252; // Range that is too far for a successful shot.
 
 /*
 Sonar must be placed between 3.81 and 7.38 inches above floor to detect low goal.
@@ -20,12 +29,22 @@ To remove possibility of detecting single balls, 4.00 to 7.38 inches. (Target: 5
 To remove possibility of detecting stacked balls, ~7.27 to 7.38 inches.
 */
 
-// Input range in feet, output angular velocity in RPM.
-const double SNR_a = 0.90937649259631;
-const double SNR_b = 0.0008294920985;
+// Determine whether or not the range is acceptable.
+bool SNR_validRange(float range) {
+	if (range != SNR_INVALID && range >= SNR_RANGE_MIN && range <= SNR_RANGE_MAX) {
+		return true;
+	}
+	return false;
+}
+
+// Input range in inches, output angular velocity in RPM.
 float SNR_angularSpeedAtRange(float range) {
-	//return 515.24 * sqrt(range);
-	return (float)(log10(range/SNR_a)/SNR_b);
+	if (SNR_validRange(range)) {
+		return SNR_IPS_TO_RPM * ((1 / cosDegrees(SNR_GUN_ANGLE)) *
+			sqrt((0.5 * SNR_GRAVITY * pow(range, 2))
+			/ (range * tanDegrees(SNR_GUN_ANGLE) - (SNR_NET_HEIGHT - SNR_GUN_HEIGHT - 2*SNR_BALL_RADIUS))));
+	}
+	return SNR_INVALID;
 }
 
 task SNR_update() {
@@ -34,8 +53,6 @@ task SNR_update() {
 		float dist = ((float) SensorValue[PRT_sonar]) / SNR_INPUT_SCALE;
 		if (dist <= SNR_MIN || dist >= SNR_MAX) {
 			dist = SNR_INVALID;
-		} else {
-
 		}
 		SNR_distanceInches = dist;
 		wait1Msec(1000 / SNR_FREQUENCY);

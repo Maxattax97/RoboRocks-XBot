@@ -10,9 +10,6 @@
 // currently applied across three seperate subsystems: the main lift, the claw lift,//
 // and the claw wrist.                                                              //
 //////////////////////////////////////////////////////////////////////////////////////
-// NOTE: MUCH OF THIS MODULE IS CURRENTLY DEPRECATED. DO NOT USE!                   //
-//////////////////////////////////////////////////////////////////////////////////////
-
 
 // Enum to access the PID's two halves.
 enum PID_Side {Left = 0, Right};
@@ -30,8 +27,7 @@ const int PID_QUAD_MIN = -32768;
 
 const float PID_INPUT_SCALE = 120; // Set this to be ENCODER TICKS / REVOLUTION.
 const float PID_INPUT_MIRROR[] = {1.0, -1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
-float PID_SIGNAL_GENERATOR_SLOPE = 250; // Slope value for "horse and carrot".
-const int PID_SYSTEM_HYSTERESIS = 8; // Solves for motor jogging without breaking PID.
+const float PID_SIGNAL_GENERATOR_SLOPE = 250; // Slope value for "horse and carrot".
 const int PID_DEADBAND = 30; // Amount of power to apply to turn wheels minimally.
 const float PID_DEADBAND_THRESHOLD = 120; // Must be moving under this speed to apply deadband.
 const float PID_targetMax = 2100; // Maximum speed in RPM.
@@ -46,6 +42,8 @@ float PID_lastQuad[] = {0, 0};
 const int PID_HISTORY_LENGTH = 5;
 float PID_actualHistory[2][PID_HISTORY_LENGTH];
 int PID_historyIndex[] = {0, 0};
+bool PID_ready = false; // Indicator to tell whether or not the gun is within 5% of its target.
+bool PID_firingBall = false; // For autonomous to detect that a ball has successfully fired.
 
 float PID_filteredTarget[] = {0, 0}; // Target with signal generator applied (horse and carrot).
 float PID_power[] = {0, 0}; // Motor power requested to acquire target speed.
@@ -57,12 +55,11 @@ float PID_lastTarget[] = {0, 0}; // For signal generator calculation.
 float PID_lastActual[] = {0, 0}; // For calculation of derivative.
 
 const int PID_OVERLOAD_THRESHOLD = 300; // If the PID is behind this much, activates overload blink task.
+const int PID_BALL_FIRED_THRESHOLD = 200; // If the PID is behind this much when a ball is being fired, mark it.
 short PID_blinkIdDisabled[] = {NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL};
 
 // PID Loop constants for Proportional, Integral, and Derivative (Items in the acronym PID).
-const float PID_KU = 1.333;
-const float PID_TU = 0.018;
 float PID_KP = 0.5;
 float PID_KI = 0.01;
 float PID_KD = 0;
@@ -170,6 +167,10 @@ void PID_cycle(PID_Side index) {
 			motor[PRT_gunRight2] = (int) PID_power[index];
 		}
 
+		if (PID_firingBall == true && PID_error[index] <= -1 * PID_BALL_FIRED_THRESHOLD) {
+			PID_firingBall = false;
+		}
+
 		// Indicate that PID is struggling to meet its target.
 		if (PID_error[index] <= -1 * PID_OVERLOAD_THRESHOLD) {
 			if (PID_blinkIdOverloaded[index] == NULL) {
@@ -267,9 +268,15 @@ task PID_blinkReadiness() {
 		}
 		if (totalReadiness <= goodEnoughThreshold) {
 			SensorValue[PRT_ledGun] = 1;
+			if (PID_target[Left] != 0 && PID_target[Right] != 0) {
+				PID_ready = true;
+			} else {
+				PID_ready = false;
+			}
 			wait1Msec(50);
 		} else {
 			SensorValue[PRT_ledGun] = 0;
+			PID_ready = false;
 			wait1Msec(LIMIT(1, 1000, 1000 * totalReadiness));
 			SensorValue[PRT_ledGun] = 1;
 			wait1Msec(50);
@@ -289,9 +296,12 @@ task PID_controller() {
 	startTask(PID_blinkReadiness);
 	while (true) {
 		// Run each individual cycle per system.
-		if (PID_useSonar == true && SNR_distanceInches >= 12*7 && SNR_distanceInches <= 12*15) {
-			PID_target[Left] = SNR_angularSpeedAtRange(SNR_distanceInches / 12);
-			PID_target[Right] = PID_target[Left];
+		if (PID_useSonar == true) {
+			float speed = SNR_angularSpeedAtRange(SNR_distanceInches);
+			if (speed != SNR_INVALID) {
+				PID_target[Left] = speed;
+				PID_target[Right] = speed;
+			}
 		}
 		PID_cycle(Left);
 		PID_cycle(Right);
@@ -299,17 +309,6 @@ task PID_controller() {
 			writeDebugStreamLine("%f, %f, %f, %f, %f, %f, %f, %f, %f",
 				((float)time1[T1]) / 1000, PID_filteredTarget[Left], PID_actual[Left], PID_power[Left], PID_error[Left],
 				PID_filteredTarget[Right], PID_actual[Right], PID_power[Right], PID_error[Right]);
-		/*// Check the battery to initiate emergency PID shut off.
-		if (batLowRetrieved == false && BAT_low == true) {
-			batLowRetrieved = true;
-			writeDebugStreamLine("[PID]: Activating emergency PID shut off to conserve power...");
-			// The user can re-enable these with PID override.
-			PID_enabled[MainLift] = false;
-			PID_enabled[ClawLift] = false;
-			PID_enabled[ClawWrist] = false;
-		} else if (BAT_low == false) {
-			batLowRetrieved = false;
-		}*/
 
 		// Repeat at defined delta time, in Hertz.
 		wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
