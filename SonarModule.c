@@ -10,6 +10,7 @@ const float SNR_MAX = 240; // 20 feet.
 const float SNR_MIN = 2; // 2 inches.
 const signed char SNR_INVALID = -88; // Designates a value that is too close or too long to be accurate.
 float SNR_distanceInches = 0; // Distance from sonar to focused object in inches.
+int SNR_trajectoryCalculation = 1;
 const int SNR_FREQUENCY = 10; // In hertz, how fast sonar calculations will be made.
 
 const float SNR_GUN_OFFSET = 1.5; // Distance from front of gun to front of sonar in inches.
@@ -19,9 +20,13 @@ const float SNR_GRAVITY = 386.088; // Acceleration in inches/s^2 of gravity.
 const float SNR_GUN_HEIGHT = 13; // Height in inches of the gun from the ground.
 const float SNR_NET_HEIGHT = 36.16; // Lower height of net opening in inches.
 const float SNR_BALL_RADIUS = 2; // Radius of a game ball in inches.
+const float SNR_WHEEL_RADIUS = 2; // Radius of the flywheel in inches.
 const float SNR_IPS_TO_RPM = 4.774648294; // Constant to multiply by inches/s to acquire rev/min.
-const float SNR_RANGE_MIN = 67.3025796; // Range that is too close for a successful shot.
-const float SNR_RANGE_MAX = 278.022252; // Range that is too far for a successful shot.
+const float SNR_FPS_TO_RPM = 57.29564553094; // Constant to multiply by feet/s to acquire rev/min.
+const float SNR_RANGE_MIN = 10.25 * 12; // Range that is too close for a successful shot.
+const float SNR_RANGE_MAX = 16.5417 * 12; // Range that is too far for a successful shot.
+const float SNR_BALL_MASS = 0.115; // Mass in pounds of the ball.
+const float SNR_WHEEL_MASS = 0.375; // Mass in pounds of the wheel.
 
 /*
 Sonar must be placed between 3.81 and 7.38 inches above floor to detect low goal.
@@ -40,9 +45,20 @@ bool SNR_validRange(float range) {
 // Input range in inches, output angular velocity in RPM.
 float SNR_angularSpeedAtRange(float range) {
 	if (SNR_validRange(range)) {
-		return SNR_IPS_TO_RPM * ((1 / cosDegrees(SNR_GUN_ANGLE)) *
-			sqrt((0.5 * SNR_GRAVITY * pow(range, 2))
-			/ (range * tanDegrees(SNR_GUN_ANGLE) - (SNR_NET_HEIGHT - SNR_GUN_HEIGHT - 2*SNR_BALL_RADIUS))));
+		if (SNR_trajectoryCalculation == 1) {
+			// Max's Equation
+			return SNR_IPS_TO_RPM * ((1 / cosDegrees(SNR_GUN_ANGLE)) *
+				sqrt((0.5 * SNR_GRAVITY * pow(range, 2))
+				/ (range * tanDegrees(SNR_GUN_ANGLE) - (SNR_NET_HEIGHT - SNR_GUN_HEIGHT))));
+		} else if (SNR_trajectoryCalculation == 2) {
+			// Firing Tables (air resistance)
+			return get_required_speed(range / 12) * SNR_FPS_TO_RPM;
+		} else if (SNR_trajectoryCalculation == 3) {
+			// Ryan, Parker, Sammy Equation
+			float vBall = sqrt((2 * range * SNR_GRAVITY)/(sinDegrees(2 * SNR_GUN_ANGLE)));
+			float angVel = sqrt((SNR_BALL_MASS * pow(vBall, 2))/(1.538 * SNR_WHEEL_MASS * pow(SNR_WHEEL_RADIUS, 2)));
+			return (angVel * 30) / PI;
+		}
 	}
 	return SNR_INVALID;
 }

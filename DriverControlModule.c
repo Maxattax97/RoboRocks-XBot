@@ -22,7 +22,7 @@ short DRV_simulatedButtonPress = -1;
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
 	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool, GunIncrement, GunDecrement,
-	GunSmallIncrement, GunSmallDecrement, SonarCapture, Ping, Override, UNASSIGNED = 99};
+	GunSmallIncrement, GunSmallDecrement, GunResetTarget, SonarCapture, Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
@@ -59,6 +59,7 @@ void DRV_setupConfig() {
 	DRV_config[GunDecrement] = Btn7D; // Decrements max gun speed.
 	DRV_config[GunSmallIncrement] = Btn7R; // Increments max gun speed by a small amount.
 	DRV_config[GunSmallDecrement] = Btn7L; // Decrements max gun speed by a small amount.
+	DRV_config[GunResetTarget] = Btn8U; // Sets the target back to default range.
 	DRV_config[SonarCapture] = Btn8R; // Saves current sonar reading to target range.
 	DRV_config[Ping] = UNASSIGNED; // Flashes lights on cortex to indicate responsiveness.
 	DRV_config[Override] = Btn8L; // Overrides the PID loop, and sets back the old, hard-wait gun system.

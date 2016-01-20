@@ -57,6 +57,7 @@
 //////////////////
 
 #include "Utilities.c"
+#include "FiringTable.c"
 #include "BlinkModule.c"
 #include "BatteryModule.c"
 #include "SonarModule.c"
@@ -245,6 +246,14 @@ task usercontrol()
 			else if (GUN_enabled == true)
 				GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallDecrement] = false;
+		}
+
+		if (DRV_controllerButtonsDown[GunResetTarget] == true) {
+			if (PID_enabled == true)
+				USR_targetRange = USR_DEFAULT_RANGE;
+			else if (GUN_enabled == true)
+				GUN_maxMotorPower = GUN_DEFAULT_POWER;
+			DRV_controllerButtonsDown[GunResetTarget] = false;
 		}
 
 		if (PID_target[Left] != 0 || PID_target[Right] != 0) {
