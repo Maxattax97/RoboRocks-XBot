@@ -61,6 +61,7 @@
 #include "BlinkModule.c"
 #include "BatteryModule.c"
 #include "SonarModule.c"
+#include "TrajectoryModule.c"
 #include "DriverControlModule.c"
 #include "GunModule.c"
 #include "PIDLoopModule.c"
@@ -140,7 +141,7 @@ task autonomous()
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
 	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = SNR_angularSpeedAtRange(13 * 12);
+	PID_target[Left] = TRJ_angularSpeedAtRange(13 * 12);
 	PID_target[Right] = PID_target[Left];
 	while (!PID_ready) {
 		wait1Msec(50);
@@ -257,7 +258,7 @@ task usercontrol()
 		}
 
 		if (PID_target[Left] != 0 || PID_target[Right] != 0) {
-			float dist = SNR_angularSpeedAtRange(USR_targetRange);
+			float dist = TRJ_angularSpeedAtRange(USR_targetRange);
 			if (dist != SNR_INVALID) {
 				PID_target[Left] = dist;
 				PID_target[Right] = dist;
@@ -271,7 +272,7 @@ task usercontrol()
 					PID_target[Right] = 0;
 					USR_targetRange = USR_DEFAULT_RANGE;
 				} else {
-					PID_target[Left] = SNR_angularSpeedAtRange(USR_targetRange);
+					PID_target[Left] = TRJ_angularSpeedAtRange(USR_targetRange);
 					PID_target[Right] = PID_target[Left];
 				}
 			} else if (GUN_enabled == true) {
@@ -284,10 +285,10 @@ task usercontrol()
 		// Sonar Capture
 		if (vexRT[DRV_config[SonarCapture]] == true) {
 			float dist = SNR_distanceInches;
-			if (SNR_validRange(dist)) {
+			if (TRJ_validRange(dist)) {
 				USR_targetRange = dist;
 				if (PID_target[Left] != 0 || PID_target[Right] != 0) {
-					PID_target[Left] = SNR_angularSpeedAtRange(USR_targetRange);
+					PID_target[Left] = TRJ_angularSpeedAtRange(USR_targetRange);
 					PID_target[Right] = PID_target[Left];
 				}
 			} else if (USR_sonarId == -1) {

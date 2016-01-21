@@ -5,7 +5,7 @@
 // robot's individual modules.                                                      //
 //////////////////////////////////////////////////////////////////////////////////////
 
-const float AUT_target = SNR_angularSpeedAtRange(13);
+const float AUT_target = TRJ_angularSpeedAtRange(13);
 
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)

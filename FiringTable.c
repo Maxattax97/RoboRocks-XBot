@@ -18,7 +18,7 @@
  * the maximum distance will return a value of -1.
  */
 
-static double launcher_data[] = {
+static float TRJ_firingTable[] = {
 	31.719520044852,
 	31.720621236397,
 	31.721231234595,
@@ -173,12 +173,12 @@ static double launcher_data[] = {
 	34.862640191296
 };
 
-double get_required_speed(double distance) {
+float TRJ_getFiringTable(float distance) {
 	int index = (distance - 10.25) / 0.041666666666667;
 
 	if(index >= 0 && index < 152) {
-		return launcher_data[index];
+		return TRJ_firingTable[index];
 	}
 
-	return -1;
+	return -77;
 }

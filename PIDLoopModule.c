@@ -55,7 +55,7 @@ float PID_lastTarget[] = {0, 0}; // For signal generator calculation.
 float PID_lastActual[] = {0, 0}; // For calculation of derivative.
 
 const int PID_OVERLOAD_THRESHOLD = 300; // If the PID is behind this much, activates overload blink task.
-const int PID_BALL_FIRED_THRESHOLD = 200; // If the PID is behind this much when a ball is being fired, mark it.
+const int PID_BALL_FIRED_THRESHOLD = 100; // If the PID is behind this much when a ball is being fired, mark it.
 short PID_blinkIdDisabled[] = {NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL};
 
@@ -284,8 +284,48 @@ task PID_blinkReadiness() {
 	}
 }
 
+bool PID_calibrateMomentum = false;
+
+task PID_calibrateMomentumCoeffecient() {
+	while (!PID_calibrateMomentum) {
+		wait1Msec(50);
+	}
+	writeDebugStreamLine("[PID]: Calibrating momentum coeffecient...");
+	for (int rpm = 2000; rpm >= 1000; rpm -= 50) {
+		PID_target[Left] = rpm;
+		PID_target[Right] = rpm;
+		while (!PID_ready) {
+			wait1Msec(50);
+		}
+		PID_firingBall = true;
+		float leftMinSpeed = 99999;
+		float leftMaxSpeed = 0;
+		float rightMinSpeed = 99999;
+		float rightMaxSpeed = 0;
+		while (PID_firingBall == true) {
+			leftMinSpeed = MIN(leftMinSpeed, PID_actual[Left]);
+			leftMaxSpeed = MAX(leftMaxSpeed, PID_actual[Left]);
+			rightMinSpeed = MIN(rightMinSpeed, PID_actual[Right]);
+			rightMaxSpeed = MAX(rightMaxSpeed, PID_actual[Right]);
+			wait1Msec(20);
+		}
+		PID_ready = false;
+		int count = 0;
+		while (count < 20) {
+			leftMinSpeed = MIN(leftMinSpeed, PID_actual[Left]);
+			leftMaxSpeed = MAX(leftMaxSpeed, PID_actual[Left]);
+			rightMinSpeed = MIN(rightMinSpeed, PID_actual[Right]);
+			rightMaxSpeed = MAX(rightMaxSpeed, PID_actual[Right]);
+			count++;
+			wait1Msec(20);
+		}
+		writeDebugStreamLine("RPM Target: %i, Left High: %f, Left Low: %f, Right High: %f, Right Low: %f", rpm, leftMaxSpeed, leftMinSpeed, rightMaxSpeed, rightMinSpeed);
+		wait1Msec(250);
+	}
+	writeDebugStreamLine("[PID]: Calibration complete.");
+}
+
 bool PID_capture = false;
-bool PID_useSonar = false;
 
 task PID_controller() {
 	//bool batLowRetrieved = false;
@@ -294,15 +334,9 @@ task PID_controller() {
 	wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
 	startTask(PID_speedLoop);
 	startTask(PID_blinkReadiness);
+	startTask(PID_calibrateMomentumCoeffecient);
 	while (true) {
 		// Run each individual cycle per system.
-		if (PID_useSonar == true) {
-			float speed = SNR_angularSpeedAtRange(SNR_distanceInches);
-			if (speed != SNR_INVALID) {
-				PID_target[Left] = speed;
-				PID_target[Right] = speed;
-			}
-		}
 		PID_cycle(Left);
 		PID_cycle(Right);
 		if (PID_capture == true && PID_power > 0)
