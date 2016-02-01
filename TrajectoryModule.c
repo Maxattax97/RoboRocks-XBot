@@ -21,7 +21,7 @@ const float TRJ_RANGE_MIN = 5 * 12; // Range that is too close for a successful 
 const float TRJ_RANGE_MAX = 16 * 12; // Range that is too far for a successful shot.
 const float TRJ_BALL_MASS = 0.115; // Mass in pounds of the ball.
 const float TRJ_WHEEL_MASS = 0.375; // Mass in pounds of the wheel.
-float TRJ_MOMENTUM_RETENTION = 0.87; // How much momentum remains in the wheels after firing.
+float TRJ_MOMENTUM_RETENTION = 0.715; // How much momentum remains in the wheels after firing.
 
 const float TRJ_INCH_TO_METER = 0.0254; // Multiply by inches to get meters.
 const float TRJ_LB_TO_KG = 0.453592; // Multiply by pounds to get kilograms.
