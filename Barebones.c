@@ -37,25 +37,55 @@
 void pre_auton()
 {
 	bStopTasksBetweenModes = false;
+	SensorValue[PRT_ledR] = 0;
+	SensorValue[PRT_ledY] = 0;
+	SensorValue[PRT_ledG] = 0;
+#if _TARGET == "Emulator"
+	startTask(usercontrol);
+#endif
 }
 
 task autonomous()
 {
-	AutonomousCodePlaceholderForTesting();
+	// Autonomous Placeholder.
+	SensorValue[PRT_ledR] = 0;
+	SensorValue[PRT_ledY] = 0;
+	SensorValue[PRT_ledG] = 0;
+	while (true) {
+		SensorValue[PRT_ledR] = 1;
+		SensorValue[PRT_ledG] = 0;
+		wait1Msec(500);
+		SensorValue[PRT_ledR] = 0;
+		SensorValue[PRT_ledY] = 1;
+		wait1Msec(500);
+		SensorValue[PRT_ledY] = 0;
+		SensorValue[PRT_ledG] = 1;
+		wait1Msec(500);
+	}
 }
 
+#define LARGE_INC 10
+#define SMALL_INC 2
+#define TARGET_DEFAULT 80
+int targetPower = TARGET_DEFAULT;
 int delta = 0;
 int power = 0;
-bool gunButtonDown = false;
-bool gunButtonDownPrevious = false;
 bool warmGuns = false;
 task guncontrol()
 {
 	while (true) {
 		while (warmGuns) {
-			if (power < 80 && delta <= time1[T1]) {
-				power += 10;
-				delta = time1[T1] + 1000;
+			if (power < targetPower && delta <= time1[T1]) {
+				power += 1;
+				delta = time1[T1] + 100;
+			}
+			if (power > targetPower) {
+				power = targetPower;
+			}
+			if (power == targetPower) {
+				SensorValue[PRT_ledG] = 1;
+			} else {
+				SensorValue[PRT_ledG] = 0;
 			}
 			motor[gunLeft1] = power;
 			motor[gunLeft2] = power;
@@ -71,23 +101,70 @@ task guncontrol()
 	}
 }
 
+enum Button {warm = 0, plusLarge, plusSmall, minusLarge, minusSmall, reset};
+bool gunButtonDown[] = {false, false, false, false, false, false};
+bool gunButtonDownPrevious[] = {false, false, false, false, false, false};
+
 task usercontrol()
 {
 	clearTimer(T1);
 	startTask(guncontrol);
 	while (true) {
 		// Gun Control
-		gunButtonDownPrevious = gunButtonDown;
+		gunButtonDownPrevious[warm] = gunButtonDown[warm];
 		if (vexRT[Btn8D] == true) {
-			gunButtonDown = true;
+			gunButtonDown[warm] = true;
 		} else {
-			gunButtonDown = false;
+			gunButtonDown[warm] = false;
 		}
 
-		if (gunButtonDownPrevious == true && gunButtonDown == false) {
+		if (gunButtonDownPrevious[warm] == true && gunButtonDown[warm] == false) {
 			warmGuns = !warmGuns;
-			gunButtonDown = false;
+			gunButtonDown[warm] = false;
 		}
+
+		// Gun Incrementers
+		gunButtonDownPrevious[plusLarge] = gunButtonDown[plusLarge];
+		gunButtonDownPrevious[plusSmall] = gunButtonDown[plusSmall];
+		gunButtonDownPrevious[minusLarge] = gunButtonDown[minusLarge];
+		gunButtonDownPrevious[minusSmall] = gunButtonDown[minusSmall];
+		gunButtonDownPrevious[reset] = gunButtonDown[reset];
+
+		gunButtonDown[plusLarge] = (bool) vexRT[Btn7U];
+		gunButtonDown[plusSmall] = (bool) vexRT[Btn7R];
+		gunButtonDown[minusLarge] = (bool) vexRT[Btn7D];
+		gunButtonDown[minusSmall] = (bool) vexRT[Btn7L];
+		gunButtonDown[reset] = (bool) vexRT[Btn8U];
+
+		if (gunButtonDownPrevious[plusLarge] == true && gunButtonDown[plusLarge] == false) {
+			targetPower += LARGE_INC;
+			gunButtonDown[plusLarge] = false;
+		}
+
+		if (gunButtonDownPrevious[plusSmall] == true && gunButtonDown[plusSmall] == false) {
+			targetPower += SMALL_INC;
+			gunButtonDown[plusSmall] = false;
+		}
+
+		if (gunButtonDownPrevious[minusLarge] == true && gunButtonDown[minusLarge] == false) {
+			targetPower -= LARGE_INC;
+			gunButtonDown[minusLarge] = false;
+		}
+
+		if (gunButtonDownPrevious[minusSmall] == true && gunButtonDown[minusSmall] == false) {
+			targetPower -= SMALL_INC;
+			gunButtonDown[minusSmall] = false;
+		}
+
+		if (gunButtonDownPrevious[reset] == true && gunButtonDown[reset] == false) {
+			targetPower = TARGET_DEFAULT;
+			gunButtonDown[reset] = false;
+		}
+
+		if (targetPower > 127)
+			targetPower = 127;
+		else if (targetPower < 0)
+			targetPower = 0;
 
 		// Feed Control
 		if (vexRT[Btn5U] == true) {
