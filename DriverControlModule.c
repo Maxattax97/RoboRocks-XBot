@@ -21,7 +21,9 @@ short DRV_simulatedButtonPress = -1;
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
-	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, GunWarm, GunSpool, GunIncrement, GunDecrement,
+	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut,
+	FeedLowerInSecondary, FeedLowerOutSecondary, FeedUpperInSecondary, FeedUpperOutSecondary,
+	GunWarm, GunSpool, GunIncrement, GunDecrement,
 	GunSmallIncrement, GunSmallDecrement, GunResetTarget, SonarCapture, Ping, Override, UNASSIGNED = 99};
 
 // These arrays are available for other parts of the code to retrieve cleaned values.
@@ -42,8 +44,8 @@ void DRV_setupConfig() {
 	DRV_config[MecanumLeftNormal] = UNASSIGNED; // Joystick channel that controls the left side wheels forward and backward movement.
 	DRV_config[MecanumLeftStrafe] = UNASSIGNED; // Joystick channel that controls the left side wheels strafing movement.
 	DRV_config[MecanumRotate] = UNASSIGNED; // Joystick channel that controls the rotating ability of both sides.
-	DRV_config[OmniLeft] = Ch3; // Joystick channel that controls the left side of omni wheels.
-	DRV_config[OmniRight] = Ch2; // Joystick channel that controls the right side of omni wheels.
+	DRV_config[OmniLeft] = Ch3Xmtr2; // Joystick channel that controls the left side of omni wheels.
+	DRV_config[OmniRight] = Ch2Xmtr2; // Joystick channel that controls the right side of omni wheels.
 	DRV_config[OmniForward] = UNASSIGNED; // Joystick channel that moves omni wheels forward and backward.
 	DRV_config[OmniRotate] = UNASSIGNED; // Joystick channel that turns omni wheels left and right.
 	DRV_config[OmniMirrorForward] = UNASSIGNED; // Joystick channel that moves omni wheels forward and backward in a mirrored fashion.
@@ -53,6 +55,10 @@ void DRV_setupConfig() {
 	DRV_config[FeedLowerOut] = Btn5D; // Lower belt feed pushes items out of robot.
 	DRV_config[FeedUpperIn] = Btn6U; // Upper belt feed pulls items into robot.
 	DRV_config[FeedUpperOut] = Btn6D; // Upper belt feed pushes items out of robot.
+	DRV_config[FeedLowerInSecondary] = Btn5UXmtr2; // Lower belt feed pulls items into robot.
+	DRV_config[FeedLowerOutSecondary] = Btn5DXmtr2; // Lower belt feed pushes items out of robot.
+	DRV_config[FeedUpperInSecondary] = Btn6UXmtr2; // Upper belt feed pulls items into robot.
+	DRV_config[FeedUpperOutSecondary] = Btn6DXmtr2; // Upper belt feed pushes items out of robot.
 	DRV_config[GunWarm] = Btn8D; // Toggles speeding up of both firing wheels.
 	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
 	DRV_config[GunIncrement] = Btn7U; // Increments max gun speed.
@@ -88,8 +94,8 @@ void DRV_setupConfig() {
 		DRV_config[MecanumRotate] = Ch1;
 	} else if (DRV_CURRENT_DRIVER == Sammy) {
 		//// SAMMY ////
-		DRV_config[OmniRight] = Ch2;
-		DRV_config[OmniLeft] = Ch3;
+		DRV_config[OmniRight] = Ch2Xmtr2;
+		DRV_config[OmniLeft] = Ch3Xmtr2;
 		DRV_config[OmniForward] = UNASSIGNED;
 		DRV_config[OmniRotate] = UNASSIGNED;
 		DRV_config[OmniMirrorForward] = UNASSIGNED;

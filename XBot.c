@@ -40,7 +40,7 @@
 
 #define ROBOT "Robot"
 #define EMULATOR "Emulator"
-#define PROGRAMMING_CHALLENGE 0
+#define PROGRAMMING_CHALLENGE 1
 
 #if (_TARGET == EMULATOR)
 #warning "###!!!### RUNNING IN EMULATOR MODE ###!!!###"
@@ -81,7 +81,21 @@ Investigate power expander status port.
 
 And as always, DOCUMENT MORE.
 
-*/////////////////////////
+*///////////////////
+// USER VARIABLES //
+////////////////////
+
+const float USR_DEFAULT_SPEED = 1650;
+const float USR_DEFAULT_RANGE = 13 * 12;
+const float USR_RANGE_LARGE_INCREMENT = 2 * 12; // 1 floor tile.
+const float USR_RANGE_SMALL_INCREMENT = 0.5 * 12; // Quarter floor tile.
+short USR_pingId = -1;
+short USR_sonarId = -1;
+short USR_reverseMultiplier = 1; // Setup the wheel reversal.
+float USR_targetRange = USR_DEFAULT_RANGE; // In feet, how far the ball should go if fired.
+float USR_targetSpeed = USR_DEFAULT_SPEED;
+
+//////////////////////////
 // PRE-AUTONOMOUS SETUP //
 //////////////////////////
 
@@ -147,7 +161,7 @@ task autonomous()
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
 	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = 1600; //TRJ_angularSpeedAtRange(13 * 12);
+	PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
 	PID_target[Right] = PID_target[Left];
 	while (!PID_ready) {
 		wait1Msec(50);
@@ -209,13 +223,34 @@ task autonomous()
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode enabled!");
 	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = 1600; //TRJ_angularSpeedAtRange(13 * 12);
+	PID_target[Left] = 1650; //TRJ_angularSpeedAtRange(13 * 12);
 	PID_target[Right] = PID_target[Left];
+	//while (!PID_ready) {
+	//	wait1Msec(50);
+	//}
+	//AUT_feedLower(-64);
+	/*ballsFired = 0;
+	PID_firingBall = true;
 	while (true) {
-		// Wait for the skills challenge to end.
+		if (PID_firingBall == false) {
+			ballsFired++;
+			PID_firingBall = true;
+		}
+		if (ballsFired >= 32 ) {
+			break;
+		}
+		wait1Msec(100);
+	}*/
+	//wait1Msec(45000);
+	//writeDebugStreamLine("Moving!");
+	//AUT_rotate(-127, 0.5);
+	//AUT_surge(127, 5);
+	//AUT_rotate(127, 2);
+	while (true) {
+		// Stall until the end of programming skills.
 		wait1Msec(1000);
 	}
-	writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
+	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
 	AUT_shutDown();
 	LED_stopBlinkTask(id);
 #endif
@@ -224,16 +259,6 @@ task autonomous()
 ///////////////////////////
 //// USER CONTROL MODE ////
 ///////////////////////////
-
-const float USR_DEFAULT_SPEED = 1650;
-const float USR_DEFAULT_RANGE = 13 * 12;
-const float USR_RANGE_LARGE_INCREMENT = 2 * 12; // 1 floor tile.
-const float USR_RANGE_SMALL_INCREMENT = 0.5 * 12; // Quarter floor tile.
-short USR_pingId = -1;
-short USR_sonarId = -1;
-short USR_reverseMultiplier = 1; // Setup the wheel reversal.
-float USR_targetRange = USR_DEFAULT_RANGE; // In feet, how far the ball should go if fired.
-float USR_targetSpeed = USR_DEFAULT_SPEED;
 
 // For manual, computer-based value editing.
 bool USR_OVERRIDE_USER_CONTROL = false;
@@ -251,16 +276,20 @@ task usercontrol()
 	// Continually check for user input.
 	while (!USR_OVERRIDE_USER_CONTROL) {
 		// Feed Control
-		if (DRV_config[FeedLowerIn] != UNASSIGNED && vexRT[DRV_config[FeedLowerIn]] == true) {
+		if ((DRV_config[FeedLowerIn] != UNASSIGNED && vexRT[DRV_config[FeedLowerIn]] == true) ||
+			(DRV_config[FeedLowerInSecondary] != UNASSIGNED && vexRT[DRV_config[FeedLowerInSecondary]] == true)) {
 			motor[PRT_feedLower] = 127;
-		} else if (DRV_config[FeedLowerOut] != UNASSIGNED && vexRT[DRV_config[FeedLowerOut]] == true) {
+		} else if ((DRV_config[FeedLowerOut] != UNASSIGNED && vexRT[DRV_config[FeedLowerOut]] == true) ||
+			(DRV_config[FeedLowerOutSecondary] != UNASSIGNED && vexRT[DRV_config[FeedLowerOutSecondary]] == true)) {
 			motor[PRT_feedLower] = -127;
 		} else {
 			motor[PRT_feedLower] = 0;
 		}
-		if (DRV_config[FeedUpperIn] != UNASSIGNED && vexRT[DRV_config[FeedUpperIn]] == true) {
+		if ((DRV_config[FeedUpperIn] != UNASSIGNED && vexRT[DRV_config[FeedUpperIn]] == true) ||
+			(DRV_config[FeedUpperInSecondary] != UNASSIGNED && vexRT[DRV_config[FeedUpperInSecondary]] == true)) {
 			motor[PRT_feedUpper] = 127;
-		} else if (DRV_config[FeedUpperOut] != UNASSIGNED && vexRT[DRV_config[FeedUpperOut]] == true) {
+		} else if ((DRV_config[FeedUpperOut] != UNASSIGNED && vexRT[DRV_config[FeedUpperOut]] == true) ||
+			(DRV_config[FeedUpperOutSecondary] != UNASSIGNED && vexRT[DRV_config[FeedUpperOutSecondary]] == true)) {
 			motor[PRT_feedUpper] = -127;
 		} else {
 			motor[PRT_feedUpper] = 0;

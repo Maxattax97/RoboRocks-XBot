@@ -4,10 +4,10 @@
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
 #pragma config(Motor,  port1,           feedLower,     tmotorVex393_HBridge, openLoop, reversed)
-#pragma config(Motor,  port2,           wheelFrontLeft, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port3,           wheelFrontRight, tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port4,           wheelBackLeft, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           wheelBackRight, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port2,           wheelFrontLeft, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port3,           wheelFrontRight, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port4,           wheelBackLeft, tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port5,           wheelBackRight, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,           gunLeft1,      tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           gunLeft2,      tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port8,           gunRight1,     tmotorVex393_MC29, openLoop, reversed)
@@ -36,7 +36,7 @@
 
 #define LARGE_INC 10
 #define SMALL_INC 2
-#define TARGET_DEFAULT 80
+#define TARGET_DEFAULT 120
 int targetPower = TARGET_DEFAULT;
 int delta = 0;
 int power = 0;
@@ -84,6 +84,8 @@ void pre_auton()
 	startTask(guncontrol);
 }
 
+#define PROGRAMMING_SKILLS 0
+
 task autonomous()
 {
 	writeDebugStreamLine("Running autonomous...");
@@ -91,6 +93,7 @@ task autonomous()
 	while (power < targetPower) {
 		wait1Msec(100);
 	}
+#if PROGRAMMING_SKILLS == 0
 	for (int i = 0; i < 4; i++) {
 		wait1Msec(800);
 		motor[feedUpper] = 127;
@@ -121,6 +124,7 @@ task autonomous()
 		motor[feedLower] = 0;
 	}
 	warmGuns = false;
+#endif
 }
 
 enum Button {warm = 0, plusLarge, plusSmall, minusLarge, minusSmall, reset};
