@@ -40,7 +40,7 @@
 
 #define ROBOT "Robot"
 #define EMULATOR "Emulator"
-#define PROGRAMMING_CHALLENGE 1
+#define PROGRAMMING_CHALLENGE 0
 
 #if (_TARGET == EMULATOR)
 #warning "###!!!### RUNNING IN EMULATOR MODE ###!!!###"
@@ -85,7 +85,7 @@ And as always, DOCUMENT MORE.
 // USER VARIABLES //
 ////////////////////
 
-const float USR_DEFAULT_SPEED = 1650;
+const float USR_DEFAULT_SPEED = 1700;
 const float USR_DEFAULT_RANGE = 13 * 12;
 const float USR_RANGE_LARGE_INCREMENT = 2 * 12; // 1 floor tile.
 const float USR_RANGE_SMALL_INCREMENT = 0.5 * 12; // Quarter floor tile.
@@ -223,7 +223,7 @@ task autonomous()
 	short id = LED_startBlinkTask(Info, Slow);
 	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode enabled!");
 	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = 1650; //TRJ_angularSpeedAtRange(13 * 12);
+	PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
 	PID_target[Right] = PID_target[Left];
 	//while (!PID_ready) {
 	//	wait1Msec(50);
@@ -248,7 +248,12 @@ task autonomous()
 	//AUT_rotate(127, 2);
 	while (true) {
 		// Stall until the end of programming skills.
-		wait1Msec(1000);
+		if (SNR_distanceInches <= 2) {
+			motor[PRT_feedUpper] = 127;
+		} else {
+			motor[PRT_feedUpper] = 0;
+		}
+		wait1Msec(50);
 	}
 	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
 	AUT_shutDown();

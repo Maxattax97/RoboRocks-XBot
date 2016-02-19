@@ -34,9 +34,9 @@
 //Main competition background code...do not modify!
 #include "Vex_Competition_Includes.c"
 
-#define LARGE_INC 10
-#define SMALL_INC 2
-#define TARGET_DEFAULT 53
+#define LARGE_INC 5
+#define SMALL_INC 1
+#define TARGET_DEFAULT 48
 int targetPower = TARGET_DEFAULT;
 int delta = 0;
 int power = 0;
@@ -44,7 +44,7 @@ bool warmGuns = false;
 task guncontrol()
 {
 	while (true) {
-		targetPower = 55;
+		targetPower = TARGET_DEFAULT;
 		while (warmGuns) {
 			if (power < targetPower && delta <= time1[T1]) {
 				power += 1;
