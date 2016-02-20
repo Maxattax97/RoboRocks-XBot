@@ -85,7 +85,7 @@ And as always, DOCUMENT MORE.
 // USER VARIABLES //
 ////////////////////
 
-const float USR_DEFAULT_SPEED = 1700;
+const float USR_DEFAULT_SPEED = 1475;
 const float USR_DEFAULT_RANGE = 13 * 12;
 const float USR_RANGE_LARGE_INCREMENT = 2 * 12; // 1 floor tile.
 const float USR_RANGE_SMALL_INCREMENT = 0.5 * 12; // Quarter floor tile.
@@ -304,14 +304,14 @@ task usercontrol()
 		if (DRV_controllerButtonsDown[GunIncrement] == true) {
 			if (PID_enabled == true)
 				//USR_targetRange += USR_RANGE_LARGE_INCREMENT;
-				USR_targetSpeed += 250;
+				USR_targetSpeed += 125;
 			else if (GUN_enabled == true)
 				GUN_maxMotorPower += GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunDecrement] == true) {
 			if (PID_enabled == true)
 				//USR_targetRange -= USR_RANGE_LARGE_INCREMENT;
-				USR_targetSpeed -= 250;
+				USR_targetSpeed -= 125;
 			else if (GUN_enabled == true)
 				GUN_maxMotorPower -= GUN_LARGE_INCREMENT;
 			DRV_controllerButtonsDown[GunDecrement] = false;
@@ -320,14 +320,14 @@ task usercontrol()
 		if (DRV_controllerButtonsDown[GunSmallIncrement] == true) {
 			if (PID_enabled == true)
 				//USR_targetRange += USR_RANGE_SMALL_INCREMENT;
-				USR_targetSpeed += 50;
+				USR_targetSpeed += 25;
 			else if (GUN_enabled == true)
 				GUN_maxMotorPower += GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallIncrement] = false;
 		} else if (DRV_controllerButtonsDown[GunSmallDecrement] == true) {
 			if (PID_enabled == true)
 				//USR_targetRange -= USR_RANGE_SMALL_INCREMENT;
-				USR_targetSpeed -= 50;
+				USR_targetSpeed -= 25;
 			else if (GUN_enabled == true)
 				GUN_maxMotorPower -= GUN_SMALL_INCREMENT;
 			DRV_controllerButtonsDown[GunSmallDecrement] = false;
