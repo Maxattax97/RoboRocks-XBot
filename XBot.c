@@ -1,6 +1,7 @@
 #pragma config(Sensor, dgtl1,  PRT_gunLeftQuad, sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  PRT_gunRightQuad, sensorQuadEncoder)
 #pragma config(Sensor, dgtl5,  PRT_sonar,      sensorSONAR_raw)
+#pragma config(Sensor, dgtl8,  PRT_skillsJumper, sensorDigitalIn)
 #pragma config(Sensor, dgtl9,  PRT_ledGun,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
@@ -53,10 +54,6 @@
 #warning "###!!!### RUNNING IN DEBUG MODE ###!!!###"
 #endif
 
-#if (PROGRAMMING_CHALLENGE == 1)
-#warning "###!!!### SET TO RUN IN PROGRAMMING CHALLENGE MODE ###!!!###"
-#endif
-
 //////////////////
 // DEPENDENCIES //
 //////////////////
@@ -94,6 +91,7 @@ short USR_sonarId = -1;
 short USR_reverseMultiplier = 1; // Setup the wheel reversal.
 float USR_targetRange = USR_DEFAULT_RANGE; // In feet, how far the ball should go if fired.
 float USR_targetSpeed = USR_DEFAULT_SPEED;
+bool USR_programmingChallenge = false;
 
 //////////////////////////
 // PRE-AUTONOMOUS SETUP //
@@ -119,6 +117,14 @@ void pre_auton()
 
 	// Initialize the battery monitor.
 	startTask(BAT_monitor);
+
+	// Check the programming skills jumper.
+	if (SensorValue[PRT_skillsJumper] == 0) {
+			USR_programmingChallenge = true;
+			writeDebugStreamLine("[Mode]: Programming skills jumper detected. Autonomous program switched.");
+	}	else {
+			USR_programmingChallenge = false;
+	}
 
 	// Reset sensors.
 	SensorType[PRT_gunLeftQuad] = sensorNone; // JPearman said to do this.
@@ -157,108 +163,90 @@ void pre_auton()
 
 task autonomous()
 {
-#if (PROGRAMMING_CHALLENGE == 0)
-	short id = LED_startBlinkTask(Info, Slow);
-	writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
-	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
-	PID_target[Right] = PID_target[Left];
-	while (!PID_ready) {
-		wait1Msec(50);
+	// Check the programming skills jumper. Again.
+	if (SensorValue[PRT_skillsJumper] == 0) {
+			USR_programmingChallenge = true;
+			writeDebugStreamLine("[Mode]: Programming skills jumper detected. Autonomous program switched.");
+	}	else {
+			USR_programmingChallenge = false;
 	}
-	writeDebugStreamLine("[Auton]: Guns warmed.");
-	//AUT_feedUpper(64);
-	//AUT_feedLower(64);
-	PID_firingBall = true;
-	for (int i = 0; i < 3; i++) {
-			wait1Msec(750);
-			writeDebugStreamLine("[Auton]: Firing ball %i...", i + 1);
-			PID_firingBall = true;
-			AUT_feedLower(127);
-			AUT_feedUpper(127);
-			if (i + 1 == 4) {
-				// Wiggle the last ball out.
-				AUT_surge(64, 0.5);
-				AUT_surge(-64, 0.5);
+
+	if (USR_programmingChallenge == false) {
+		//short id = LED_startBlinkTask(Info, Slow);
+		//writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
+		//writeDebugStreamLine("[Auton]: Warming guns...");
+		//PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
+		//PID_target[Right] = PID_target[Left];
+		//while (!PID_ready) {
+		//	wait1Msec(50);
+		//}
+		//writeDebugStreamLine("[Auton]: Guns warmed.");
+		////AUT_feedUpper(64);
+		////AUT_feedLower(64);
+		//PID_firingBall = true;
+		//for (int i = 0; i < 3; i++) {
+		//		while (!PID_ready) {
+		//			wait1Msec(50);
+		//		}
+		//		writeDebugStreamLine("[Auton]: Firing ball %i...", i + 1);
+		//		PID_firingBall = true;
+		//		AUT_feedLower(127);
+		//		AUT_feedUpper(127);
+		//		if (i + 1 == 4) {
+		//			// Wiggle the last ball out.
+		//			AUT_surge(64, 0.5);
+		//			AUT_surge(-64, 0.5);
+		//		}
+		//		while (PID_firingBall == true) {
+		//			wait1Msec(50);
+		//		}
+		//		writeDebugStreamLine("[Auton]: Ball fired!");
+		//		AUT_feedLower(0);
+		//		AUT_feedUpper(0);
+		//}
+		//writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
+		//AUT_shutDown();
+		//LED_stopBlinkTask(id);
+	} else {
+		short id = LED_startBlinkTask(Info, Slow);
+		writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode enabled!");
+		writeDebugStreamLine("[Auton]: Warming guns...");
+		PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
+		PID_target[Right] = PID_target[Left];
+		//while (!PID_ready) {
+		//	wait1Msec(50);
+		//}
+		//AUT_feedLower(-64);
+		/*ballsFired = 0;
+		PID_firingBall = true;
+		while (true) {
+			if (PID_firingBall == false) {
+				ballsFired++;
+				PID_firingBall = true;
 			}
-			while (PID_firingBall == true) {
-				wait1Msec(50);
+			if (ballsFired >= 32 ) {
+				break;
 			}
-			writeDebugStreamLine("[Auton]: Ball fired!");
-			AUT_feedLower(0);
-			AUT_feedUpper(0);
-	}
-	/*PID_firingBall = true;
-	AUT_feedUpper(127);
-	while (PID_firingBall == true) {
-		wait1Msec(50);
-	}
-	writeDebugStreamLine("[Auton]: Ball fired!");
-	AUT_feedUpper(0);
-	for (int i = 0; i < 3; i++) {
-			while (!PID_ready) { // Max power changed
-				wait1Msec(50);
-			}
-			writeDebugStreamLine("[Auton]: Firing ball %i...", i + 2);
-			PID_firingBall = true;
-			AUT_feedLower(127);
-			AUT_feedUpper(127);
-			if (i + 2 == 4) {
-				// Wiggle the last ball out.
-				AUT_surge(64, 0.5);
-				AUT_surge(-64, 0.5);
-			}
-			while (PID_firingBall == true) {
-				wait1Msec(50);
-			}
-			writeDebugStreamLine("[Auton]: Ball fired!");
-			AUT_feedLower(0);
-			AUT_feedUpper(0);
-	}
-	writeDebugStreamLine("[Auton]: Shutting down.");
-	AUT_shutDown();
-	writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
-	LED_stopBlinkTask(id);*/
-#else
-	short id = LED_startBlinkTask(Info, Slow);
-	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode enabled!");
-	writeDebugStreamLine("[Auton]: Warming guns...");
-	PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
-	PID_target[Right] = PID_target[Left];
-	//while (!PID_ready) {
-	//	wait1Msec(50);
-	//}
-	//AUT_feedLower(-64);
-	/*ballsFired = 0;
-	PID_firingBall = true;
-	while (true) {
-		if (PID_firingBall == false) {
-			ballsFired++;
-			PID_firingBall = true;
+			wait1Msec(100);
+		}*/
+		//wait1Msec(45000);
+		//writeDebugStreamLine("Moving!");
+		//AUT_rotate(-127, 0.5);
+		//AUT_surge(127, 5);
+		//AUT_rotate(127, 2);
+		while (true) {
+			// Stall until the end of programming skills.
+			/*if (SNR_distanceInches <= 2) {
+				motor[PRT_feedUpper] = 127;
+			} else {
+				motor[PRT_feedUpper] = 0;
+			}*/
+			wait1Msec(50);
 		}
-		if (ballsFired >= 32 ) {
-			break;
-		}
-		wait1Msec(100);
-	}*/
-	//wait1Msec(45000);
-	//writeDebugStreamLine("Moving!");
-	//AUT_rotate(-127, 0.5);
-	//AUT_surge(127, 5);
-	//AUT_rotate(127, 2);
-	while (true) {
-		// Stall until the end of programming skills.
-		if (SNR_distanceInches <= 2) {
-			motor[PRT_feedUpper] = 127;
-		} else {
-			motor[PRT_feedUpper] = 0;
-		}
-		wait1Msec(50);
+		writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
+		AUT_shutDown();
+		LED_stopBlinkTask(id);
 	}
-	writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
-	AUT_shutDown();
-	LED_stopBlinkTask(id);
-#endif
 }
 
 ///////////////////////////
@@ -290,12 +278,15 @@ task usercontrol()
 		} else {
 			motor[PRT_feedLower] = 0;
 		}
+
 		if ((DRV_config[FeedUpperIn] != UNASSIGNED && vexRT[DRV_config[FeedUpperIn]] == true) ||
 			(DRV_config[FeedUpperInSecondary] != UNASSIGNED && vexRT[DRV_config[FeedUpperInSecondary]] == true)) {
 			motor[PRT_feedUpper] = 127;
 		} else if ((DRV_config[FeedUpperOut] != UNASSIGNED && vexRT[DRV_config[FeedUpperOut]] == true) ||
 			(DRV_config[FeedUpperOutSecondary] != UNASSIGNED && vexRT[DRV_config[FeedUpperOutSecondary]] == true)) {
 			motor[PRT_feedUpper] = -127;
+		} else if (DRV_config[FeedUpperInSmall] != UNASSIGNED && vexRT[DRV_config[FeedUpperInSmall]] == true) {
+			motor[PRT_feedUpper] = 32;
 		} else {
 			motor[PRT_feedUpper] = 0;
 		}
@@ -395,6 +386,13 @@ task usercontrol()
 
 		if (DRV_config[OmniLeft] != UNASSIGNED && DRV_config[OmniRight] != UNASSIGNED) {
 			// 2 channel (tank) drive for OMNI WHEELS enabled.
+			if (USR_reverseMultiplier < 0 && ((DRV_trimChannel(OmniLeft) < 0 && DRV_trimChannel(OmniRight) > 0) || (DRV_trimChannel(OmniLeft) > 0 && DRV_trimChannel(OmniRight) < 0))) {
+				// User is trying to turn while reversed.
+				motor[PRT_wheelFrontLeft]  = DRV_trimChannel(OmniLeft);
+				motor[PRT_wheelBackLeft]   = DRV_trimChannel(OmniLeft);
+				motor[PRT_wheelFrontRight] = DRV_trimChannel(OmniRight);
+				motor[PRT_wheelBackRight]  = DRV_trimChannel(OmniRight);
+			}
 			motor[PRT_wheelFrontLeft]  = DRV_trimChannel(OmniLeft)  * USR_reverseMultiplier;
 			motor[PRT_wheelBackLeft]   = DRV_trimChannel(OmniLeft)  * USR_reverseMultiplier;
 			motor[PRT_wheelFrontRight] = DRV_trimChannel(OmniRight) * USR_reverseMultiplier;

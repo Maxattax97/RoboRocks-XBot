@@ -21,7 +21,7 @@ short DRV_simulatedButtonPress = -1;
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
-	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut,
+	FeedLowerIn, FeedLowerOut, FeedUpperIn, FeedUpperOut, FeedUpperInSmall,
 	FeedLowerInSecondary, FeedLowerOutSecondary, FeedUpperInSecondary, FeedUpperOutSecondary,
 	GunWarm, GunSpool, GunIncrement, GunDecrement,
 	GunSmallIncrement, GunSmallDecrement, GunResetTarget, SonarCapture, Ping, Override, UNASSIGNED = 99};
@@ -59,6 +59,7 @@ void DRV_setupConfig() {
 	DRV_config[FeedLowerOutSecondary] = Btn5DXmtr2; // Lower belt feed pushes items out of robot.
 	DRV_config[FeedUpperInSecondary] = Btn6UXmtr2; // Upper belt feed pulls items into robot.
 	DRV_config[FeedUpperOutSecondary] = Btn6DXmtr2; // Upper belt feed pushes items out of robot.
+	DRV_config[FeedUpperInSmall] = Btn8UXmtr2;
 	DRV_config[GunWarm] = Btn8D; // Toggles speeding up of both firing wheels.
 	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
 	DRV_config[GunIncrement] = Btn7U; // Increments max gun speed.
@@ -100,6 +101,7 @@ void DRV_setupConfig() {
 		DRV_config[OmniRotate] = UNASSIGNED;
 		DRV_config[OmniMirrorForward] = UNASSIGNED;
 		DRV_config[OmniMirrorRotate] = UNASSIGNED;
+		DRV_config[ToggleMirror] = Btn8DXmtr2;
 	}
 }
 
