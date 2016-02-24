@@ -30,11 +30,13 @@ enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeft
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
 bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
+int DRV_currentController = 3; // 1: Primary | 2: Secondary | 3: Both
+short DRV_controllerWarningLed = -1;
 const int DRV_JOYSTICK_THRESHOLD = 15; // The trim for the joystick values.
 const int DRV_INTERVALS_PER_SECOND = 50; // Hertz rate to check buttons.
 
 void DRV_setupConfig() {
-	writeDebugStreamLine("[Config]: The designated driver index is %i", DRV_CURRENT_DRIVER);
+	writeDebugStreamLine("[Config]: The designated driver index is %i.", DRV_CURRENT_DRIVER);
 	//// DEFAULT ////
 	// Setup default button binds, then let DRV_CURRENT_DRIVER override. No hollow values that way.
 	// Joystick slots should only be channels or UNASSIGNED.
@@ -59,7 +61,7 @@ void DRV_setupConfig() {
 	DRV_config[FeedLowerOutSecondary] = Btn5DXmtr2; // Lower belt feed pushes items out of robot.
 	DRV_config[FeedUpperInSecondary] = Btn6UXmtr2; // Upper belt feed pulls items into robot.
 	DRV_config[FeedUpperOutSecondary] = Btn6DXmtr2; // Upper belt feed pushes items out of robot.
-	DRV_config[FeedUpperInSmall] = Btn8UXmtr2;
+	DRV_config[FeedUpperInSmall] = UNASSIGNED; // Was temporarily used for small feed adjustments.
 	DRV_config[GunWarm] = Btn8D; // Toggles speeding up of both firing wheels.
 	DRV_config[GunSpool] = UNASSIGNED; // Gun speeds up until warm, then repeats cooling and warming to maintain speed and battery.
 	DRV_config[GunIncrement] = Btn7U; // Increments max gun speed.
@@ -67,7 +69,7 @@ void DRV_setupConfig() {
 	DRV_config[GunSmallIncrement] = Btn7R; // Increments max gun speed by a small amount.
 	DRV_config[GunSmallDecrement] = Btn7L; // Decrements max gun speed by a small amount.
 	DRV_config[GunResetTarget] = Btn8U; // Sets the target back to default range.
-	DRV_config[SonarCapture] = Btn8R; // Saves current sonar reading to target range.
+	DRV_config[SonarCapture] = UNASSIGNED; // Saves current sonar reading to target range.
 	DRV_config[Ping] = UNASSIGNED; // Flashes lights on cortex to indicate responsiveness.
 	DRV_config[Override] = Btn8L; // Overrides the PID loop, and sets back the old, hard-wait gun system.
 
@@ -101,7 +103,7 @@ void DRV_setupConfig() {
 		DRV_config[OmniRotate] = UNASSIGNED;
 		DRV_config[OmniMirrorForward] = UNASSIGNED;
 		DRV_config[OmniMirrorRotate] = UNASSIGNED;
-		DRV_config[ToggleMirror] = Btn8DXmtr2;
+		DRV_config[ToggleMirror] = Btn8RXmtr2;
 	}
 }
 
@@ -112,6 +114,53 @@ int DRV_trimChannel(DRV_RemoteFunction channel, int trim = DRV_JOYSTICK_THRESHOL
 		return 0;
 	}
 	return value;
+}
+
+// Accepts a button/joystick from one controller and translates it to the opposite controller.
+// If reverse is false, will return controller 1's corresponding button. Otherwise, will return controller 2's.
+short DRV_translateXmtr(short button, bool reverse = false) {
+	if (reverse == false) {
+		switch (button) {
+			case Ch1Xmtr2   : return Ch1;
+			case Ch2Xmtr2   : return Ch2;
+			case Ch3Xmtr2   : return Ch3;
+			case Ch4Xmtr2   : return Ch4;
+			case Btn5UXmtr2 : return Btn5U;
+			case Btn5DXmtr2 : return Btn5D;
+			case Btn6UXmtr2 : return Btn6U;
+			case Btn6DXmtr2 : return Btn6D;
+			case Btn7UXmtr2 : return Btn7U;
+			case Btn7DXmtr2 : return Btn7D;
+			case Btn7LXmtr2 : return Btn7L;
+			case Btn7RXmtr2 : return Btn7R;
+			case Btn8UXmtr2 : return Btn8U;
+			case Btn8DXmtr2 : return Btn8D;
+			case Btn8LXmtr2 : return Btn8L;
+			case Btn8RXmtr2 : return Btn8R;
+			default: return button;
+		}
+	} else if (reverse == true) {
+		switch (button) {
+			case Ch1   : return Ch1Xmtr2;
+			case Ch2   : return Ch2Xmtr2;
+			case Ch3   : return Ch3Xmtr2;
+			case Ch4   : return Ch4Xmtr2;
+			case Btn5U : return Btn5UXmtr2;
+			case Btn5D : return Btn5DXmtr2;
+			case Btn6U : return Btn6UXmtr2;
+			case Btn6D : return Btn6DXmtr2;
+			case Btn7U : return Btn7UXmtr2;
+			case Btn7D : return Btn7DXmtr2;
+			case Btn7L : return Btn7LXmtr2;
+			case Btn7R : return Btn7RXmtr2;
+			case Btn8U : return Btn8UXmtr2;
+			case Btn8D : return Btn8DXmtr2;
+			case Btn8L : return Btn8LXmtr2;
+			case Btn8R : return Btn8RXmtr2;
+			default: return button;
+		}
+	}
+	return button;
 }
 
 #if DEBUG == 1

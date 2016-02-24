@@ -6,6 +6,7 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 const float AUT_target = TRJ_angularSpeedAtRange(13);
+const float AUT_SHORT_SPEED = 1100;
 
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)
@@ -107,6 +108,22 @@ void AUT_spoolGuns() {
 	GUN_spool = true;
 }
 */
+
+bool AUT_alignWithSonar(float left, float right, float tolerance = 0.5) {
+	if (left != SNR_INVALID && right != SNR_INVALID) {
+			if (abs(left - right) <= tolerance) {
+				AUT_halt();
+				return true; // Return true to indicate now aligned.
+			} else if (left > right) {
+				AUT_rotate(-64); // Closer to right. Rotate counter-clockwise.
+			} else if (right > left) {
+				AUT_rotate(64); // Closer to left. Rotate clockwise.
+			}
+	}
+	// Don't move anything. Wait for input.
+	return false;
+}
+
 void AUT_fireOnce() {
 	AUT_warmGuns();
 	if (GUN_enabled) {
@@ -138,7 +155,7 @@ void AUT_shutDown() {
 	motor[PRT_feedLower] = 0;
 	motor[PRT_feedUpper] = 0;
 }
-/*
+
 void AUT_demonstrate() {
 	writeDebugStreamLine("[Auton]: Enabling autonomous demonstration procedure.");
 	writeDebugStreamLine("[Auton]: Surging forward...");
@@ -160,4 +177,3 @@ void AUT_demonstrate() {
 	writeDebugStreamLine("[Auton]: Shutting down...");
 	writeDebugStreamLine("[Auton]: Autonomous demonstration procedure complete.");
 }
-*/

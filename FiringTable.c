@@ -18,7 +18,7 @@
  * the maximum distance will return a value of -1.
  */
 
-static float TRJ_firingTable[] = {
+const float TRJ_firingTable[] = {
 	31.719520044852,
 	31.720621236397,
 	31.721231234595,

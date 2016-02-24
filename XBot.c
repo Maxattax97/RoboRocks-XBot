@@ -1,7 +1,8 @@
+#pragma config(Sensor, in1,    PRT_skillsJumper, sensorAnalog)
 #pragma config(Sensor, dgtl1,  PRT_gunLeftQuad, sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  PRT_gunRightQuad, sensorQuadEncoder)
-#pragma config(Sensor, dgtl5,  PRT_sonar,      sensorSONAR_raw)
-#pragma config(Sensor, dgtl8,  PRT_skillsJumper, sensorDigitalIn)
+#pragma config(Sensor, dgtl5,  PRT_leftSonar,  sensorSONAR_raw)
+#pragma config(Sensor, dgtl7,  PRT_rightSonar, sensorSONAR_raw)
 #pragma config(Sensor, dgtl9,  PRT_ledGun,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl10, PRT_ledR,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
@@ -73,6 +74,10 @@
 // TODO LIST //
 /*/////////////
 
+Test new controller override.
+Test new autonomous.
+Debug programming skills navigations.
+Debug skills jumper. (Switched to analog)
 Monitor battery backup.
 Investigate power expander status port.
 
@@ -172,75 +177,107 @@ task autonomous()
 	}
 
 	if (USR_programmingChallenge == false) {
-		//short id = LED_startBlinkTask(Info, Slow);
-		//writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
-		//writeDebugStreamLine("[Auton]: Warming guns...");
-		//PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
-		//PID_target[Right] = PID_target[Left];
-		//while (!PID_ready) {
-		//	wait1Msec(50);
-		//}
-		//writeDebugStreamLine("[Auton]: Guns warmed.");
-		////AUT_feedUpper(64);
-		////AUT_feedLower(64);
-		//PID_firingBall = true;
-		//for (int i = 0; i < 3; i++) {
-		//		while (!PID_ready) {
-		//			wait1Msec(50);
-		//		}
-		//		writeDebugStreamLine("[Auton]: Firing ball %i...", i + 1);
-		//		PID_firingBall = true;
-		//		AUT_feedLower(127);
-		//		AUT_feedUpper(127);
-		//		if (i + 1 == 4) {
-		//			// Wiggle the last ball out.
-		//			AUT_surge(64, 0.5);
-		//			AUT_surge(-64, 0.5);
-		//		}
-		//		while (PID_firingBall == true) {
-		//			wait1Msec(50);
-		//		}
-		//		writeDebugStreamLine("[Auton]: Ball fired!");
-		//		AUT_feedLower(0);
-		//		AUT_feedUpper(0);
-		//}
-		//writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
-		//AUT_shutDown();
-		//LED_stopBlinkTask(id);
+		// COMPETITION AUTONOMOUS //
+		short id = LED_startBlinkTask(Info, Slow);
+		writeDebugStreamLine("[Mode]: Autonomous mode enabled!");
+		writeDebugStreamLine("[Auton]: Warming guns...");
+		PID_target[Left] = USR_DEFAULT_SPEED;
+		PID_target[Right] = PID_target[Left];
+		for (int i = 1; i <= 4; i++) {
+				while (!PID_ready) {
+					wait1Msec(50);
+				}
+				writeDebugStreamLine("[Auton]: Firing ball %i...", i);
+				PID_firingBall = true;
+				AUT_feedLower(127);
+				AUT_feedUpper(127);
+				if (i == 4) {
+					// Wiggle the last ball out.
+					AUT_surge(64, 0.5);
+					AUT_surge(-64, 0.5);
+				}
+				while (PID_firingBall == true) {
+					wait1Msec(50);
+				}
+				writeDebugStreamLine("[Auton]: Ball fired!");
+				AUT_feedLower(0);
+				AUT_feedUpper(0);
+		}
+		writeDebugStreamLine("[Mode]: Autonomous mode disabled.");
+		AUT_shutDown();
+		LED_stopBlinkTask(id);
 	} else {
+		// PROGRAMMING SKILLS CHALLENGE //
+		float startTime = ((float)time1[T1]) / 1000;
 		short id = LED_startBlinkTask(Info, Slow);
 		writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode enabled!");
 		writeDebugStreamLine("[Auton]: Warming guns...");
-		PID_target[Left] = USR_DEFAULT_SPEED; //TRJ_angularSpeedAtRange(13 * 12);
+		PID_target[Left] = AUT_SHORT_SPEED;
 		PID_target[Right] = PID_target[Left];
-		//while (!PID_ready) {
-		//	wait1Msec(50);
-		//}
-		//AUT_feedLower(-64);
-		/*ballsFired = 0;
+		// Wait for the gun to fully warm up.
+		AUT_feedUpper(32);
+		while (!PID_ready) {
+			wait1Msec(50);
+		}
+		AUT_feedUpper(0);
+		writeDebugStreamLine("Ready to fire.");
+		int ballsFired = 0;
 		PID_firingBall = true;
+		float overrideTime = 40.0; // Leave the square after 40 seconds are up.
 		while (true) {
 			if (PID_firingBall == false) {
+				// Increment fired balls by 1, then indicate for the user to wait for warmup.
 				ballsFired++;
+				writeDebugStreamLine("Ball %i fired! Warming up...", ballsFired);
+				AUT_feedUpper(32);
+				while (!PID_ready) {
+					wait1Msec(50);
+				}
+				writeDebugStreamLine("Ready to fire.");
+				AUT_feedUpper(0);
 				PID_firingBall = true;
 			}
-			if (ballsFired >= 32 ) {
+			if (ballsFired >= 32 || (((float)time1[T1]) / 1000) - startTime >= overrideTime ) {
+				// If 32 balls have been fired, exit loop to navigate to other side.
+				// If override time exceeded, exit.
+				writeDebugStreamLine("Exiting base to navigate to the opposite side...");
+				PID_firingBall = false;
+				AUT_feedUpper(32);
 				break;
 			}
-			wait1Msec(100);
-		}*/
-		//wait1Msec(45000);
-		//writeDebugStreamLine("Moving!");
-		//AUT_rotate(-127, 0.5);
-		//AUT_surge(127, 5);
-		//AUT_rotate(127, 2);
-		while (true) {
-			// Stall until the end of programming skills.
-			/*if (SNR_distanceInches <= 2) {
-				motor[PRT_feedUpper] = 127;
-			} else {
-				motor[PRT_feedUpper] = 0;
-			}*/
+			wait1Msec(50);
+		}
+
+		// To keep balls out, although unlikely.
+		AUT_feedLower(-64);
+
+		// Start rotating to prepare to reverse into opposite side.
+		AUT_rotate(64, 0.5);
+		// Start aligning with opposing wall.
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight) == false) {
+			wait1Msec(50);
+		}
+
+		// Do the moonwalk. Just for show. (Reverse)
+		AUT_surge(-127);
+		while ((SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2 >= 3.0
+			&& SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
+			wait1Msec(50);
+		}
+		// Stop after (average) 3 inches from wall.
+		AUT_halt();
+
+		// Align with wall to face the new goal.
+		AUT_rotate(-64, 0.5);
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight) == false) {
+			wait1Msec(50);
+		}
+		// Prepare to fire everything!
+		writeDebugStreamLine("Entered opposing base and ready to fire.");
+		AUT_feedLower(0);
+		AUT_feedUpper(0);
+
+		while ((((float)time1[T1]) / 1000) - startTime < 60.0) {
 			wait1Msec(50);
 		}
 		writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
@@ -386,7 +423,8 @@ task usercontrol()
 
 		if (DRV_config[OmniLeft] != UNASSIGNED && DRV_config[OmniRight] != UNASSIGNED) {
 			// 2 channel (tank) drive for OMNI WHEELS enabled.
-			if (USR_reverseMultiplier < 0 && ((DRV_trimChannel(OmniLeft) < 0 && DRV_trimChannel(OmniRight) > 0) || (DRV_trimChannel(OmniLeft) > 0 && DRV_trimChannel(OmniRight) < 0))) {
+			if (USR_reverseMultiplier < 0 && ((DRV_trimChannel(OmniLeft) < 0 && DRV_trimChannel(OmniRight) > 0)
+				|| (DRV_trimChannel(OmniLeft) > 0 && DRV_trimChannel(OmniRight) < 0))) {
 				// User is trying to turn while reversed.
 				motor[PRT_wheelFrontLeft]  = DRV_trimChannel(OmniLeft);
 				motor[PRT_wheelBackLeft]   = DRV_trimChannel(OmniLeft);
@@ -485,8 +523,34 @@ task usercontrol()
 		}
 
 		// Override controls
-		if (DRV_controllerButtonsDown[Override] == true) {
-			// If a combination of the override button and a system button are pressed, toggle that particular system's PID.
+		if (vexRT[Btn7R] == true && vexRT[Btn8L] == true
+			&& vexRT[Btn7RXmtr2] == true && vexRT[Btn8LXmtr2] == true && DRV_currentController != 3) {
+			// Reset all controls to default settings.
+			DRV_currentController = 3;
+			DRV_setupConfig();
+			if (DRV_controllerWarningLed != -1 && LED_stopBlinkTask(DRV_controllerWarningLed)) {
+				DRV_controllerWarningLed = -1;
+			}
+		} else if (vexRT[Btn7R] == true && vexRT[Btn8L] == true && DRV_currentController != 1) {
+			DRV_currentController = 1;
+			if (DRV_controllerWarningLed == -1) {
+				DRV_controllerWarningLed = LED_startBlinkTask(Warning, Irregular);
+			}
+			for (int i = 0; i < sizeof(DRV_config) / sizeof(DRV_config[0]); i++) {
+					// Switch all controls over to PRIMARY controller.
+					DRV_config[i] = DRV_translateXmtr(DRV_config[i]);
+			}
+		} else if (vexRT[Btn7RXmtr2] == true && vexRT[Btn8LXmtr2] == true && DRV_currentController != 2) {
+			DRV_currentController = 2;
+			if (DRV_controllerWarningLed == -1) {
+				DRV_controllerWarningLed = LED_startBlinkTask(Warning, Irregular);
+			}
+			for (int i = 0; i < sizeof(DRV_config) / sizeof(DRV_config[0]); i++) {
+					// Switch all controls over to SECONDARY controller.
+					DRV_config[i] = DRV_translateXmtr(DRV_config[i], true);
+			}
+		} else if (DRV_controllerButtonsDown[Override] == true) {
+			// Switch PID to the old, timer based system.
 			// Toggle the PID then reset motors.
 			GUN_enabled = !GUN_enabled;
 			PID_enabled = !PID_enabled;
@@ -494,7 +558,6 @@ task usercontrol()
 			motor[PRT_gunLeft2] = 0;
 			motor[PRT_gunRight1] = 0;
 			motor[PRT_gunRight2] = 0;
-
 
 			// Indicate to the DriverControlModule that we have recieved the button press.
 			DRV_controllerButtonsDown[Override] = false;
