@@ -43,7 +43,7 @@ const int PID_HISTORY_LENGTH = 5;
 float PID_actualHistory[2][PID_HISTORY_LENGTH];
 int PID_historyIndex[] = {0, 0};
 bool PID_ready = false; // Indicator to tell whether or not the gun is within 5% of its target.
-bool PID_firingBall = false; // For autonomous to detect that a ball has successfully fired.
+bool PID_ballFired = false; // For autonomous to detect that a ball has successfully fired.
 
 float PID_filteredTarget[] = {0, 0}; // Target with signal generator applied (horse and carrot).
 float PID_power[] = {0, 0}; // Motor power requested to acquire target speed.
@@ -55,7 +55,7 @@ float PID_lastTarget[] = {0, 0}; // For signal generator calculation.
 float PID_lastActual[] = {0, 0}; // For calculation of derivative.
 
 const int PID_OVERLOAD_THRESHOLD = 300; // If the PID is behind this much, activates overload blink task.
-const int PID_BALL_FIRED_THRESHOLD = 100; // If the PID is behind this much when a ball is being fired, mark it.
+const float PID_BALL_FIRED_DERIVATIVE = -50.0; // If the RPM is changing by this much, trip the ball fired value.
 short PID_blinkIdDisabled[] = {NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL};
 
@@ -162,14 +162,16 @@ void PID_cycle(PID_Side index) {
 		if (index == Left) {
 			motor[PRT_gunLeft1] = (int) PID_power[index];
 			motor[PRT_gunLeft2] = (int) PID_power[index];
+			motor[PRT_gunLeft3] = (int) PID_power[index];
 		} else if (index == Right) {
 			motor[PRT_gunRight1] = (int) PID_power[index];
 			motor[PRT_gunRight2] = (int) PID_power[index];
+			motor[PRT_gunRight3] = (int) PID_power[index];
 		}
 
-		if (PID_firingBall == true && PID_error[index] <= -1 * PID_BALL_FIRED_THRESHOLD) {
+		/*if (PID_firingBall == true && PID_error[index] <= -1 * PID_BALL_FIRED_THRESHOLD) {
 			PID_firingBall = false;
-		}
+		}*/
 
 		// Indicate that PID is struggling to meet its target.
 		if (PID_error[index] <= -1 * PID_OVERLOAD_THRESHOLD) {
@@ -215,7 +217,10 @@ void PID_cycle(PID_Side index) {
 
 task PID_speedLoop() {
 	writeDebugStreamLine("[PID]: Speed sampler started.");
+	float beforeActuals[] = {PID_actual[Left], PID_actual[Right]};
 	while (true) {
+		beforeActuals[Left] = PID_actual[Left];
+		beforeActuals[Right] = PID_actual[Right];
 		for (short index = Left; index < Right + 1; index++) {
 			// Determine how much time has elapsed (in minutes for RPM).
 			PID_speedDelta[index] = ((((float)time1[T1]) / 1000) / 60) - PID_speedDeltaStart[index];
@@ -251,6 +256,12 @@ task PID_speedLoop() {
 				PID_speedDeltaStart[index] = (((float)time1[T1]) / 1000) / 60;
 			}
 		}
+
+		if (((PID_actual[Left] - beforeActuals[Left]) + (PID_actual[Right] - beforeActuals[Right])) / 2 <= PID_BALL_FIRED_DERIVATIVE) {
+			// Event must be cancelled to retrieve a new value.
+			PID_ballFired = true;
+		}
+
 		wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
 	}
 }
@@ -284,6 +295,7 @@ task PID_blinkReadiness() {
 	}
 }
 
+/*
 bool PID_calibrateMomentum = false;
 
 task PID_calibrateMomentumCoeffecient() {
@@ -303,9 +315,9 @@ task PID_calibrateMomentumCoeffecient() {
 		float rightMinSpeed = 99999;
 		float rightMaxSpeed = 0;
 		while (PID_firingBall == true) {
-			leftMinSpeed = MIN(leftMinSpeed, PID_actual[Left]);
+			//leftMinSpeed = MIN(leftMinSpeed, PID_actual[Left]);
 			leftMaxSpeed = MAX(leftMaxSpeed, PID_actual[Left]);
-			rightMinSpeed = MIN(rightMinSpeed, PID_actual[Right]);
+			//rightMinSpeed = MIN(rightMinSpeed, PID_actual[Right]);
 			rightMaxSpeed = MAX(rightMaxSpeed, PID_actual[Right]);
 			wait1Msec(20);
 		}
@@ -313,9 +325,9 @@ task PID_calibrateMomentumCoeffecient() {
 		int count = 0;
 		while (count < 20) {
 			leftMinSpeed = MIN(leftMinSpeed, PID_actual[Left]);
-			leftMaxSpeed = MAX(leftMaxSpeed, PID_actual[Left]);
+			//leftMaxSpeed = MAX(leftMaxSpeed, PID_actual[Left]);
 			rightMinSpeed = MIN(rightMinSpeed, PID_actual[Right]);
-			rightMaxSpeed = MAX(rightMaxSpeed, PID_actual[Right]);
+			//rightMaxSpeed = MAX(rightMaxSpeed, PID_actual[Right]);
 			count++;
 			wait1Msec(20);
 		}
@@ -324,6 +336,7 @@ task PID_calibrateMomentumCoeffecient() {
 	}
 	writeDebugStreamLine("[PID]: Calibration complete.");
 }
+*/
 
 bool PID_capture = false;
 
@@ -334,7 +347,7 @@ task PID_controller() {
 	wait1Msec(1000 / PID_INTERVALS_PER_SECOND);
 	startTask(PID_speedLoop);
 	startTask(PID_blinkReadiness);
-	startTask(PID_calibrateMomentumCoeffecient);
+	//startTask(PID_calibrateMomentumCoeffecient);
 	while (true) {
 		// Run each individual cycle per system.
 		PID_cycle(Left);

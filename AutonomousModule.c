@@ -7,23 +7,41 @@
 
 const float AUT_target = TRJ_angularSpeedAtRange(13);
 const float AUT_SHORT_SPEED = 1210; //1250;
+int AUT_ballsFired = 0;
+
+task AUT_countFiredBalls() {
+	AUT_ballsFired = 0;
+	writeDebugStreamLine("[Auton]: Counting fired balls...");
+	while (true) {
+		if (PID_ballFired == true) {
+			AUT_ballsFired++;
+			writeDebugStreamLine("Ball %i fired!", AUT_ballsFired);
+		}
+		wait1Msec(150);
+	}
+}
 
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)
 	// Positive is forward, negative is backward.
-	motor[PRT_wheelFrontRight] = power;
+	motor[PRT_wheelsLeft] = power;
+	motor[PRT_wheelsRight] = power;
+	/*motor[PRT_wheelFrontRight] = power;
 	motor[PRT_wheelBackRight] = power;
 	motor[PRT_wheelFrontLeft] = power;
-	motor[PRT_wheelBackLeft] = power;
+	motor[PRT_wheelBackLeft] = power;*/
 	if (time != 0) {
 		wait1Msec((int)(time * 1000));
-		motor[PRT_wheelFrontRight] = 0;
+		motor[PRT_wheelsLeft] = power;
+		motor[PRT_wheelsRight] = power;
+		/*motor[PRT_wheelFrontRight] = 0;
 		motor[PRT_wheelBackRight] = 0;
 		motor[PRT_wheelFrontLeft] = 0;
-		motor[PRT_wheelBackLeft] = 0;
+		motor[PRT_wheelBackLeft] = 0;*/
 	}
 }
 
+/*
 void AUT_strafe(int power, float time = 0) {
 	// To move left or right without rotation.
 	// Positive is to the right, negative is to the left.
@@ -38,29 +56,35 @@ void AUT_strafe(int power, float time = 0) {
 		motor[PRT_wheelFrontLeft] = 0;
 		motor[PRT_wheelBackLeft] = 0;
 	}
-}
+}*/
 
 void AUT_rotate(int power, float time = 0) {
 	// To turn left or right without surge movement.
 	// Positive is clockwise, negative is counter clockwise.
-	motor[PRT_wheelFrontRight] = -power;
+	motor[PRT_wheelsLeft] = power;
+	motor[PRT_wheelsRight] = -power;
+	/*motor[PRT_wheelFrontRight] = -power;
 	motor[PRT_wheelBackRight] = -power;
 	motor[PRT_wheelFrontLeft] = power;
-	motor[PRT_wheelBackLeft] = power;
+	motor[PRT_wheelBackLeft] = power;*/
 	if (time != 0) {
 		wait1Msec((int)(time * 1000));
-		motor[PRT_wheelFrontRight] = 0;
+		motor[PRT_wheelsLeft] = 0;
+		motor[PRT_wheelsRight] = 0;
+		/*motor[PRT_wheelFrontRight] = 0;
 		motor[PRT_wheelBackRight] = 0;
 		motor[PRT_wheelFrontLeft] = 0;
-		motor[PRT_wheelBackLeft] = 0;
+		motor[PRT_wheelBackLeft] = 0;*/
 	}
 }
 
 void AUT_halt() {
-	motor[PRT_wheelFrontRight] = 0;
+	motor[PRT_wheelsLeft] = 0;
+	motor[PRT_wheelsRight] = 0;
+	/*motor[PRT_wheelFrontRight] = 0;
 	motor[PRT_wheelBackRight] = 0;
 	motor[PRT_wheelFrontLeft] = 0;
-	motor[PRT_wheelBackLeft] = 0;
+	motor[PRT_wheelBackLeft] = 0;*/
 }
 
 void AUT_feedLower(int power = 127, float time = 0) {
@@ -127,6 +151,23 @@ bool AUT_alignWithSonar(float left, float right, float tolerance = 0.5, float ri
 	return false;
 }
 
+bool AUT_distanceWithSonar(float left, float right, float target, float tolerance = 0.5) {
+	if (SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
+		float average = (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2;
+		if (average < target - tolerance) {
+			AUT_surge(32);
+		} else if (average > target + tolerance) {
+			AUT_surge(-32);
+		} else {
+			AUT_halt();
+			return true;
+		}
+		wait1Msec(50);
+	}
+	// Don't move anything. Wait for input.
+	return false;
+}
+
 void AUT_fireOnce() {
 	AUT_warmGuns();
 	if (GUN_enabled) {
@@ -164,11 +205,11 @@ void AUT_demonstrate() {
 	writeDebugStreamLine("[Auton]: Surging forward...");
 	AUT_surge(64, 0.5);
 	writeDebugStreamLine("[Auton]: Strafing right...");
-	AUT_strafe(64, 0.5);
+	//AUT_strafe(64, 0.5);
 	writeDebugStreamLine("[Auton]: Surging backward...");
 	AUT_surge(-64, 0.5);
 	writeDebugStreamLine("[Auton]: Strafing left...");
-	AUT_strafe(-64, 0.5);
+	//AUT_strafe(-64, 0.5);
 	writeDebugStreamLine("[Auton]: Rotating right...");
 	AUT_rotate(64, 0.5);
 	writeDebugStreamLine("[Auton]: Strafing left...");

@@ -18,8 +18,6 @@ const DRV_Driver DRV_CURRENT_DRIVER = Sammy;
 const int DRV_BUTTON_COUNT = 32;
 short DRV_simulatedButtonPress = -1;
 
-bool DRV_controllerOverridden = false;
-
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,
@@ -32,6 +30,11 @@ enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeft
 DRV_RemoteFunction DRV_config[DRV_BUTTON_COUNT]; // This array returns the bound button/joystick value from the controller.
 bool DRV_controllerButtonsDown[DRV_BUTTON_COUNT]; // This array returns only BUTTONS that have been pushed down ONCE. Comparable to onDown() event.
 
+// 0: No override in process.
+// 1: Primary controller override in process.
+// 2: Secondary controller override in process.
+// 3: Both controller overrides in process.
+int DRV_controllerOverrideDown = 0;
 int DRV_currentController = 3; // 1: Primary | 2: Secondary | 3: Both
 short DRV_controllerWarningLed = -1;
 const int DRV_JOYSTICK_THRESHOLD = 15; // The trim for the joystick values.

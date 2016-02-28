@@ -101,8 +101,10 @@ void GUN_hardWaitCycle() {
 		// Apply motor power.
 		motor[PRT_gunLeft1] = GUN_power;
 		motor[PRT_gunLeft2] = GUN_power;
+		motor[PRT_gunLeft3] = GUN_power;
 		motor[PRT_gunRight1] = GUN_power;
 		motor[PRT_gunRight2] = GUN_power;
+		motor[PRT_gunRight3] = GUN_power;
 
 		wait1Msec(1000 / GUN_CYCLES_PER_SECOND);
 
