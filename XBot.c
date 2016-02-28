@@ -74,10 +74,10 @@
 // TODO LIST //
 /*/////////////
 
-Test new controller override.
+Test new controller override. (Both)
 Test new autonomous.
 Debug programming skills navigations.
-Debug skills jumper. (Switched to analog)
+Debug skills jumper. (Switched to analog) (0 and 256/7)
 Monitor battery backup.
 Investigate power expander status port.
 
@@ -220,63 +220,101 @@ task autonomous()
 			wait1Msec(50);
 		}
 		AUT_feedUpper(0);
-		writeDebugStreamLine("Ready to fire.");
+		writeDebugStreamLine("[Auton]: Ready to fire.");
 		int ballsFired = 0;
 		PID_firingBall = true;
-		float overrideTime = 40.0; // Leave the square after 40 seconds are up.
+		float overrideTime = 35.0; //40.0; // Leave the square after 40 seconds are up.
 		while (true) {
-			if (PID_firingBall == false) {
+			/*if (PID_firingBall == false) {
 				// Increment fired balls by 1, then indicate for the user to wait for warmup.
 				ballsFired++;
-				writeDebugStreamLine("Ball %i fired! Warming up...", ballsFired);
-				AUT_feedUpper(32);
+				writeDebugStreamLine("[Auton]: Ball %i fired! Warming up...", ballsFired);
+				//AUT_feedUpper(32);
 				while (!PID_ready) {
 					wait1Msec(50);
 				}
-				writeDebugStreamLine("Ready to fire.");
+				writeDebugStreamLine("[Auton]: Ready to fire.");
 				AUT_feedUpper(0);
 				PID_firingBall = true;
-			}
-			if (ballsFired >= 32 || (((float)time1[T1]) / 1000) - startTime >= overrideTime ) {
+			}*/
+			if ((((float)time1[T1]) / 1000) - startTime >= overrideTime || ballsFired >= 32) {
 				// If 32 balls have been fired, exit loop to navigate to other side.
 				// If override time exceeded, exit.
-				writeDebugStreamLine("Exiting base to navigate to the opposite side...");
+				writeDebugStreamLine("[Auton]: Exiting base to navigate to the opposite side...");
 				PID_firingBall = false;
 				AUT_feedUpper(32);
 				break;
 			}
 			wait1Msec(50);
 		}
+		float navStartTime = ((float)time1[T1]) / 1000;
 
 		// To keep balls out, although unlikely.
 		AUT_feedLower(-64);
 
 		// Start rotating to prepare to reverse into opposite side.
-		AUT_rotate(64, 0.5);
+		AUT_rotate(64, 1.2);
+		writeDebugStreamLine("[Auton]: Making a partial moonwalk.");
+		AUT_surge(-127, 3.2);
+		writeDebugStreamLine("[Auton]: Correcting course...");
 		// Start aligning with opposing wall.
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight) == false) {
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 1) == false) {
+			writeDebugStreamLine("Left: %f | Right: %f", SNR_distanceInchesLeft, SNR_distanceInchesRight);
 			wait1Msec(50);
 		}
+		writeDebugStreamLine("Left: %f | Right: %f", SNR_distanceInchesLeft, SNR_distanceInchesRight);
 
 		// Do the moonwalk. Just for show. (Reverse)
+		writeDebugStreamLine("[Auton]: Course corrected. Continuing moonwalk...");
 		AUT_surge(-127);
-		while ((SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2 >= 3.0
+		wait1Msec(1800);
+		writeDebugStreamLine("[Auton]: Average sonar distance is currently reading %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
+		while ((SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2 >= 10.0
 			&& SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
+			writeDebugStreamLine("Average: %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
 			wait1Msec(50);
 		}
+		writeDebugStreamLine("Average: %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
 		// Stop after (average) 3 inches from wall.
+		writeDebugStreamLine("[Auton]: Stopping and aligning with net...");
 		AUT_halt();
 
 		// Align with wall to face the new goal.
-		AUT_rotate(-64, 0.5);
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight) == false) {
+		AUT_rotate(-64, 1);
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.5) == false) {
 			wait1Msec(50);
 		}
 		// Prepare to fire everything!
-		writeDebugStreamLine("Entered opposing base and ready to fire.");
+		writeDebugStreamLine("[Auton]: Aligned with net. Correcting distance.");
+
+		writeDebugStreamLine("[Auton]: Average sonar distance is currently reading %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
+		while (true) {
+			if (SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
+				float average = (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2;
+				if (average < 24.0) {
+						AUT_surge(64);
+				} else if (average > 26.0) {
+					AUT_surge(-64);
+				} else {
+					AUT_halt();
+					break;
+				}
+				writeDebugStreamLine("Average: %f", average);
+				wait1Msec(50);
+			}
+		}
+
+		writeDebugStreamLine("[Auton]: Distance corrected. Fine tuning angle...");
+
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.5, 1.02) == false) {
+			wait1Msec(50);
+		}
+		writeDebugStreamLine("[Auton]: Angle fine tuned. Ready to fire.");
 		AUT_feedLower(0);
 		AUT_feedUpper(0);
 
+		writeDebugStreamLine("[Auton]: Navigation took %f seconds", (((float)time1[T1]) / 1000) - navStartTime);
+		// Might want to tweak the end time so that we get every last millisecond out of the referee's reflex time.
 		while ((((float)time1[T1]) / 1000) - startTime < 60.0) {
 			wait1Msec(50);
 		}
@@ -526,6 +564,7 @@ task usercontrol()
 		if (vexRT[Btn7R] == true && vexRT[Btn8L] == true
 			&& vexRT[Btn7RXmtr2] == true && vexRT[Btn8LXmtr2] == true && DRV_currentController != 3) {
 			// Reset all controls to default settings.
+			//DRV_controllerOverridden = true;
 			DRV_currentController = 3;
 			DRV_setupConfig();
 			if (DRV_controllerWarningLed != -1 && LED_stopBlinkTask(DRV_controllerWarningLed)) {

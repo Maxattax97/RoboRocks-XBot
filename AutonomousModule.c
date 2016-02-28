@@ -6,7 +6,7 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 const float AUT_target = TRJ_angularSpeedAtRange(13);
-const float AUT_SHORT_SPEED = 1100;
+const float AUT_SHORT_SPEED = 1210; //1250;
 
 void AUT_surge(int power = 127, float time = 0) {
 	// To move forward or backward. (Nautical term)
@@ -109,15 +109,18 @@ void AUT_spoolGuns() {
 }
 */
 
-bool AUT_alignWithSonar(float left, float right, float tolerance = 0.5) {
+// Align the robot perpendicular to a surface using sonar. Both values must be within tolerance of each other.
+// If the robot needs to be slightly off of perpendicular, offset the right side by a percentage to reach a
+// desired angle.
+bool AUT_alignWithSonar(float left, float right, float tolerance = 0.5, float rightPercentage = 1.0) {
 	if (left != SNR_INVALID && right != SNR_INVALID) {
-			if (abs(left - right) <= tolerance) {
+			if (abs((rightPercentage * left) - right) <= tolerance) {
 				AUT_halt();
 				return true; // Return true to indicate now aligned.
-			} else if (left > right) {
-				AUT_rotate(-64); // Closer to right. Rotate counter-clockwise.
-			} else if (right > left) {
-				AUT_rotate(64); // Closer to left. Rotate clockwise.
+			} else if ((rightPercentage * left) > right) {
+				AUT_rotate(-55); // Closer to right. Rotate counter-clockwise.
+			} else if (right > (left * rightPercentage)) {
+				AUT_rotate(55); // Closer to left. Rotate clockwise.
 			}
 	}
 	// Don't move anything. Wait for input.

@@ -18,6 +18,8 @@ const DRV_Driver DRV_CURRENT_DRIVER = Sammy;
 const int DRV_BUTTON_COUNT = 32;
 short DRV_simulatedButtonPress = -1;
 
+bool DRV_controllerOverridden = false;
+
 // Enum values to bind program functions with buttons.
 enum DRV_RemoteFunction {MecanumRightNormal = 0, MecanumRightStrafe, MecanumLeftNormal, MecanumLeftStrafe, MecanumRotate,
 	OmniLeft, OmniRight, OmniForward, OmniRotate, OmniMirrorForward, OmniMirrorRotate, ToggleMirror,

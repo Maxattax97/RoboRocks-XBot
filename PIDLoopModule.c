@@ -27,7 +27,7 @@ const int PID_QUAD_MIN = -32768;
 
 const float PID_INPUT_SCALE = 120; // Set this to be ENCODER TICKS / REVOLUTION.
 const float PID_INPUT_MIRROR[] = {1.0, -1.0}; // Flips sensor direction. Encoders read clockwise as increasing.
-const float PID_SIGNAL_GENERATOR_SLOPE = 250; // Slope value for "horse and carrot".
+const float PID_SIGNAL_GENERATOR_SLOPE = 1200; // Slope value for "horse and carrot".
 const int PID_DEADBAND = 30; // Amount of power to apply to turn wheels minimally.
 const float PID_DEADBAND_THRESHOLD = 120; // Must be moving under this speed to apply deadband.
 const float PID_targetMax = 2100; // Maximum speed in RPM.
