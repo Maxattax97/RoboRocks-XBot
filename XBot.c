@@ -8,7 +8,7 @@
 #pragma config(Sensor, dgtl11, PRT_ledY,       sensorLEDtoVCC)
 #pragma config(Sensor, dgtl12, PRT_ledG,       sensorLEDtoVCC)
 #pragma config(Motor,  port1,           PRT_feedLower, tmotorVex393_HBridge, openLoop, reversed)
-#pragma config(Motor,  port2,           PRT_feedUpper, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port2,           PRT_feedUpper, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port3,           PRT_wheelsRight, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port4,           PRT_wheelsLeft, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,           PRT_gunRight1, tmotorVex393_MC29, openLoop, reversed)
@@ -85,8 +85,6 @@
 // TODO LIST //
 /*/////////////
 
-Test wheels and gun with new Y-Cables and motors.
-Test new controller override. (Both)
 Test new autonomous.
 Monitor battery backup.
 Investigate power expander status port.
@@ -232,10 +230,10 @@ task autonomous()
 		AUT_feedUpper(0);
 		startTask(AUT_countFiredBalls);
 		writeDebugStreamLine("[Auton]: Ready to fire.");
-		float overrideTime = 35.0; //40.0; // Leave the square after 40 seconds are up.
+		float overrideTime = 35.0; // Leave the square after 40 seconds are up.
 		float startHomeFiringTime = ((float)time1[T1]) / 1000;
 		while (true) {
-			if ((((float)time1[T1]) / 1000) - startTime >= overrideTime || AUT_ballsFired >= 32) {
+			if ((((float)time1[T1]) / 1000) - startTime >= overrideTime) {// || AUT_ballsFired >= 32) {
 				// If 32 balls have been fired, exit loop to navigate to other side.
 				// If override time exceeded, exit.
 				writeDebugStreamLine("[Auton]: Exiting base to navigate to the opposite side...");
@@ -251,12 +249,12 @@ task autonomous()
 		AUT_feedLower(-64);
 
 		// Start rotating to prepare to reverse into opposite side.
-		AUT_rotate(64, 1.2);
+		AUT_rotate(64, 1);
 		writeDebugStreamLine("[Auton]: Moonwalking...");
 		AUT_surge(-127, 3.2);
 		writeDebugStreamLine("[Auton]: Correcting course...");
 		// Start aligning with opposing wall.
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 1) == false) {
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.5) == false) {
 			writeDebugStreamLine("Left: %f | Right: %f", SNR_distanceInchesLeft, SNR_distanceInchesRight);
 			wait1Msec(50);
 		}
@@ -286,14 +284,14 @@ task autonomous()
 		writeDebugStreamLine("[Auton]: Aligned with net. Correcting distance.");
 
 		writeDebugStreamLine("[Auton]: Average sonar distance is currently reading %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
-		while (AUT_distanceWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 25.0) == false) {
+		while (AUT_distanceWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 25.0, 0.25) == false) {
 			writeDebugStreamLine("Average: %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
 			wait1Msec(50);
 		}
 
 		writeDebugStreamLine("[Auton]: Distance corrected. Fine tuning angle...");
 
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.5, 1.02) == false) {
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.3, 1.015) == false) {
 			wait1Msec(50);
 		}
 		writeDebugStreamLine("[Auton]: Angle fine tuned. Ready to fire.");
@@ -569,7 +567,7 @@ task usercontrol()
 			if (DRV_controllerWarningLed != -1 && LED_stopBlinkTask(DRV_controllerWarningLed)) {
 				DRV_controllerWarningLed = -1;
 			}
-		} else if (vexRT[Btn7R] == true && vexRT[Btn8L] == true && DRV_currentController != 1 && DRV_controllerOverrideDown < 1) {
+		} else if (vexRT[Btn5U] == true && vexRT[Btn5D] == true && vexRT[Btn6U] == true && vexRT[Btn6D] == true && DRV_currentController != 1 && DRV_controllerOverrideDown < 1) {
 			DRV_currentController = 1;
 			DRV_controllerOverrideDown = 1;
 			if (DRV_controllerWarningLed == -1) {
@@ -579,7 +577,8 @@ task usercontrol()
 					// Switch all controls over to PRIMARY controller.
 					DRV_config[i] = DRV_translateXmtr(DRV_config[i]);
 			}
-		} else if (vexRT[Btn7RXmtr2] == true && vexRT[Btn8LXmtr2] == true && DRV_currentController != 2 && DRV_controllerOverrideDown < 2) {
+		} else if (vexRT[Btn5UXmtr2] == true && vexRT[Btn5DXmtr2] == true && vexRT[Btn6UXmtr2] == true &&
+			vexRT[Btn6DXmtr2] == true && DRV_currentController != 2 && DRV_controllerOverrideDown < 2) {
 			DRV_currentController = 2;
 			DRV_controllerOverrideDown = 2;
 			if (DRV_controllerWarningLed == -1) {

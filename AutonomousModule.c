@@ -6,7 +6,7 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 const float AUT_target = TRJ_angularSpeedAtRange(13);
-const float AUT_SHORT_SPEED = 1210; //1250;
+const float AUT_SHORT_SPEED = 1250;
 int AUT_ballsFired = 0;
 
 task AUT_countFiredBalls() {
@@ -15,9 +15,19 @@ task AUT_countFiredBalls() {
 	while (true) {
 		if (PID_ballFired == true) {
 			AUT_ballsFired++;
-			writeDebugStreamLine("Ball %i fired!", AUT_ballsFired);
+			writeDebugStreamLine("[Auton]: Ball %i fired!", AUT_ballsFired);
+			PID_ballFired = false;
+			while (true) {
+				wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
+				if (PID_ballFired == true) {
+					PID_ballFired = false; // Cancel event.
+				} else {
+					break; // Ball is "fully fired".
+				}
+			}
+		} else {
+			wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
 		}
-		wait1Msec(150);
 	}
 }
 
@@ -142,9 +152,9 @@ bool AUT_alignWithSonar(float left, float right, float tolerance = 0.5, float ri
 				AUT_halt();
 				return true; // Return true to indicate now aligned.
 			} else if ((rightPercentage * left) > right) {
-				AUT_rotate(-55); // Closer to right. Rotate counter-clockwise.
+				AUT_rotate(-48); // Closer to right. Rotate counter-clockwise.
 			} else if (right > (left * rightPercentage)) {
-				AUT_rotate(55); // Closer to left. Rotate clockwise.
+				AUT_rotate(48); // Closer to left. Rotate clockwise.
 			}
 	}
 	// Don't move anything. Wait for input.
@@ -155,9 +165,9 @@ bool AUT_distanceWithSonar(float left, float right, float target, float toleranc
 	if (SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
 		float average = (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2;
 		if (average < target - tolerance) {
-			AUT_surge(32);
+			AUT_surge(24);
 		} else if (average > target + tolerance) {
-			AUT_surge(-32);
+			AUT_surge(-24);
 		} else {
 			AUT_halt();
 			return true;
