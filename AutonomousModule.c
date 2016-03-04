@@ -16,7 +16,7 @@ task AUT_countFiredBalls() {
 		if (PID_ballFired == true) {
 			AUT_ballsFired++;
 			writeDebugStreamLine("[Auton]: Ball %i fired!", AUT_ballsFired);
-			PID_ballFired = false;
+			/*PID_ballFired = false;
 			while (true) {
 				wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
 				if (PID_ballFired == true) {
@@ -24,9 +24,11 @@ task AUT_countFiredBalls() {
 				} else {
 					break; // Ball is "fully fired".
 				}
-			}
+			}*/
+			wait1Msec(200);
+			PID_ballFired = false;
 		} else {
-			wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND);
+			wait1Msec(1000 / PID_SPEED_INTERVALS_PER_SECOND * 2);
 		}
 	}
 }

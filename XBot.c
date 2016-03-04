@@ -230,7 +230,7 @@ task autonomous()
 		AUT_feedUpper(0);
 		startTask(AUT_countFiredBalls);
 		writeDebugStreamLine("[Auton]: Ready to fire.");
-		float overrideTime = 35.0; // Leave the square after 40 seconds are up.
+		float overrideTime = 35.0; // Leave the square after 35 seconds are up.
 		float startHomeFiringTime = ((float)time1[T1]) / 1000;
 		while (true) {
 			if ((((float)time1[T1]) / 1000) - startTime >= overrideTime) {// || AUT_ballsFired >= 32) {
@@ -249,12 +249,12 @@ task autonomous()
 		AUT_feedLower(-64);
 
 		// Start rotating to prepare to reverse into opposite side.
-		AUT_rotate(64, 1);
+		AUT_rotate(64, 1.4);
 		writeDebugStreamLine("[Auton]: Moonwalking...");
 		AUT_surge(-127, 3.2);
 		writeDebugStreamLine("[Auton]: Correcting course...");
 		// Start aligning with opposing wall.
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.5) == false) {
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.25) == false) {
 			writeDebugStreamLine("Left: %f | Right: %f", SNR_distanceInchesLeft, SNR_distanceInchesRight);
 			wait1Msec(50);
 		}
@@ -265,7 +265,7 @@ task autonomous()
 		AUT_surge(-127);
 		wait1Msec(1700);
 		writeDebugStreamLine("[Auton]: Average sonar distance is currently reading %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
-		while ((SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2 >= 10.0
+		while ((SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2 >= 13.0
 			&& SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
 			writeDebugStreamLine("Average: %f", (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2);
 			wait1Msec(50);
@@ -291,7 +291,8 @@ task autonomous()
 
 		writeDebugStreamLine("[Auton]: Distance corrected. Fine tuning angle...");
 
-		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.3, 1.015) == false) {
+		while (AUT_alignWithSonar(SNR_distanceInchesLeft, SNR_distanceInchesRight, 0.05, 1.005) == false) {
+			writeDebugStreamLine("Left: %f | Right: %f", SNR_distanceInchesLeft, SNR_distanceInchesRight);
 			wait1Msec(50);
 		}
 		writeDebugStreamLine("[Auton]: Angle fine tuned. Ready to fire.");
@@ -328,7 +329,8 @@ task usercontrol()
 	PID_target[Left] = 0;
 	PID_target[Right] = 0;
 	// Make sure the ball count task was stopped.
-	stopTask(AUT_countFiredBalls);
+	stopTask(AUT_countFiredBalls); // Reset ball counter.
+	startTask(AUT_countFiredBalls);
 	// Continually check for user input.
 	while (!USR_OVERRIDE_USER_CONTROL) {
 		// Feed Control

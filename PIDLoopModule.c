@@ -55,7 +55,7 @@ float PID_lastTarget[] = {0, 0}; // For signal generator calculation.
 float PID_lastActual[] = {0, 0}; // For calculation of derivative.
 
 const int PID_OVERLOAD_THRESHOLD = 300; // If the PID is behind this much, activates overload blink task.
-const float PID_BALL_FIRED_DERIVATIVE = -35.0; // If the RPM is changing by this much, trip the ball fired value.
+const float PID_BALL_FIRED_DERIVATIVE = -40.0; // If the RPM is changing by this much, trip the ball fired value.
 short PID_blinkIdDisabled[] = {NULL, NULL}; // Placeholders for blink task ID's.
 short PID_blinkIdOverloaded[] = {NULL, NULL};
 
@@ -259,7 +259,7 @@ task PID_speedLoop() {
 
 		if (((PID_actual[Left] - beforeActuals[Left]) + (PID_actual[Right] - beforeActuals[Right])) / 2 <= PID_BALL_FIRED_DERIVATIVE) {
 			// Event must be cancelled to retrieve a new value.
-			writeDebugStreamLine("[PID]: Acceleration is reading %f.", ((PID_actual[Left] - beforeActuals[Left]) + (PID_actual[Right] - beforeActuals[Right])) / 2);
+			writeDebugStreamLine("[PID]: Acceleration is reading %f at time %f.", ((PID_actual[Left] - beforeActuals[Left]) + (PID_actual[Right] - beforeActuals[Right])) / 2, (((float)time1[T1]) / 1000));
 			PID_ballFired = true;
 		}
 
