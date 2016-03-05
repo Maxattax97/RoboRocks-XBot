@@ -167,9 +167,9 @@ bool AUT_distanceWithSonar(float left, float right, float target, float toleranc
 	if (SNR_distanceInchesLeft != SNR_INVALID && SNR_distanceInchesRight != SNR_INVALID) {
 		float average = (SNR_distanceInchesLeft + SNR_distanceInchesRight) / 2;
 		if (average < target - tolerance) {
-			AUT_surge(24);
+			AUT_surge(28);
 		} else if (average > target + tolerance) {
-			AUT_surge(-24);
+			AUT_surge(-28);
 		} else {
 			AUT_halt();
 			return true;

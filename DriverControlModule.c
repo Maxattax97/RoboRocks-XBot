@@ -14,7 +14,7 @@
 // Add a name to DRV_Driver enum, then add configurations in DRV_setupConfig() using an if statement.
 enum DRV_Driver {Default, Parker, Zander, Ryan, Sammy};
 // If you are unsure, leave the setting on Default. It is configured to be efficient and intuitive.
-const DRV_Driver DRV_CURRENT_DRIVER = Sammy;
+const DRV_Driver DRV_CURRENT_DRIVER = Zander;
 const int DRV_BUTTON_COUNT = 32;
 short DRV_simulatedButtonPress = -1;
 
@@ -89,10 +89,10 @@ void DRV_setupConfig() {
 		//// ZANDER ////
 		DRV_config[OmniRight] = UNASSIGNED;
 		DRV_config[OmniLeft] = UNASSIGNED;
-		DRV_config[OmniForward] = Ch3;
-		DRV_config[OmniRotate] = Ch4;
-		DRV_config[OmniMirrorForward] = Ch2;
-		DRV_config[OmniMirrorRotate] = Ch1;
+		DRV_config[OmniForward] = Ch3Xmtr2;
+		DRV_config[OmniRotate] = Ch4Xmtr2;
+		DRV_config[OmniMirrorForward] = Ch2Xmtr2;
+		DRV_config[OmniMirrorRotate] = Ch1Xmtr2;
 	} else if (DRV_CURRENT_DRIVER == Ryan) {
 		//// RYAN ////
 		DRV_config[MecanumRightNormal] = Ch3;

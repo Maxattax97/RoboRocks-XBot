@@ -85,6 +85,7 @@
 // TODO LIST //
 /*/////////////
 
+Install dummy jumper cable.
 Test new autonomous.
 Monitor battery backup.
 Investigate power expander status port.
@@ -301,7 +302,7 @@ task autonomous()
 
 		writeDebugStreamLine("[Auton]: Navigation took %f seconds", (((float)time1[T1]) / 1000) - navStartTime);
 		// Might want to tweak the end time so that we get every last millisecond out of the referee's reflex time.
-		while ((((float)time1[T1]) / 1000) - startTime < 60.0) {
+		while ((((float)time1[T1]) / 1000) - startTime < 65.0) {
 			wait1Msec(50);
 		}
 		writeDebugStreamLine("[Mode]: Autonomous (programming skills) mode disabled.");
