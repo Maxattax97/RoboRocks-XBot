@@ -6,7 +6,7 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 const float AUT_target = TRJ_angularSpeedAtRange(13);
-const float AUT_SHORT_SPEED = 1250;
+const float AUT_SHORT_SPEED = 1263;
 int AUT_ballsFired = 0;
 
 task AUT_countFiredBalls() {

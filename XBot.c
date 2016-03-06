@@ -192,20 +192,15 @@ task autonomous()
 		writeDebugStreamLine("[Auton]: Warming guns...");
 		PID_target[Left] = USR_DEFAULT_SPEED;
 		PID_target[Right] = PID_target[Left];
-		for (int i = 1; i <= 4; i++) {
+		for (int i = 1; i <= 5; i++) { // In the event that one fails, add one more.
 				while (!PID_ready) {
 					wait1Msec(50);
 				}
 				writeDebugStreamLine("[Auton]: Firing ball %i...", i);
 				AUT_feedLower(127);
 				AUT_feedUpper(127);
-				if (i == 4) {
-					// Wiggle the last ball out.
-					AUT_surge(64, 0.5);
-					AUT_surge(-64, 0.5);
-				}
 				while (PID_ballFired == false) {
-					wait1Msec(150);
+					wait1Msec(300);
 				}
 				PID_ballFired = false;
 				writeDebugStreamLine("[Auton]: Ball fired!");
